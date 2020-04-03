@@ -21,17 +21,33 @@
 # Need to fill in GDT
 gdt: 
     # (1) null descriptor -- 1st (Zeroth) entry not used
+    .long 0
+    .long 0
 
     # (2) Kernel CS
     # code descriptor
+    .long 0x0000FFFF
+    .long 0x00CF9A00
+    # Base: 0x00000000; Limit: 0xFFFFF
+    # Flags: 0xC(1100) -> 4KB blocks(page granularity) and 32 bit protected mode
+    # Access Byte: 0x9A(10011010)
+    #           Pr: 1; Privl: 00(highest); S(Descriptor type): 1; 
+    #           Ex(Executable bit): 1 -> code selector
 
     # (3) Kernel DS
     # data descriptor
+    .long 0x0000FFFF
+    .long 0x00CF9200
+    # Access Byte: 0x92(10010010)
+    #           Ex(Executable bit): 0 -> data selector
+
+    # (4) Task State Segment
+    # (5) Other segments if needed: user-level, LDTs, TSS
 
 gdt_ptr:
     # size: 2 bytes
     .short 0x7FF    # length in bytes - 3 descriptors but space for 256
-    
+
     # offset: 4 bytes
     .long gdt       # linear address of the table itself
 
