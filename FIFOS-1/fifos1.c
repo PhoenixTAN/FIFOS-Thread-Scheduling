@@ -5,84 +5,85 @@
 */
 
 #include "multiboot.h"
+#include "thread.h"
+#include "print.h"
 
 /* Macros. */
+/* The number of threads */ 
+#define N                       3
+#define stack_size              1024
 
-/* Check if the bit BIT in FLAGS is set. */
-#define CHECK_FLAG(flags,bit)   ((flags) & (1 << (bit)))
+/* Variables */
+static TCB tcb[N];
+static int uid = 0;     // counter
 
-/* Some screen stuff. */
-/* The number of columns. */
-#define COLUMNS                 80
-/* The number of lines. */
-#define LINES                   24
-/* The attribute of an character. */
-#define ATTRIBUTE               7
-/* The video memory address. */
-#define VIDEO                   0xB8000
-
-/* Variables. */
-/* Save the X position (column). */
-static int xpos;
-/* Save the Y position (row). */
-static int ypos;
-/* Point to the video memory. */
-static volatile unsigned char *video;
+/* Private stack for threads */
+multiboot_uint32_t stack1[stack_size];
+multiboot_uint32_t stack2[stack_size;
+multiboot_uint32_t stack3[stack_size];
 
 /* Forward declarations. */
-void init(multiboot_info_t* pmb);
-static void cls (void);
-void put_char(char ch);
-void put_string(char* string);
-void newline(void);
+void init(multiboot_info_t* pmb);       /* entrance of the C code */
+int thread_create(void* stack, void* run);
+void thread1_run();
+void thread2_run();
+void thread3_run();
+void fifo_scheduler();
 
 void init(multiboot_info_t* pmb) {
     cls();
-    put_string("FIFOS-1: Ziqi Tan, Jiaqian Sun");
+    println("FIFOS-1: Ziqi Tan, Jiaqian Sun");
+    println("First come first serve thread scheduler:");
     
+    /* create threads */
+    create_therad(&stack1[stack_size-1], thread1_run);
+    create_therad(&stack2[stack_size-1], thread2_run);
+    create_therad(&stack3[stack_size-1], thread3_run);
 }
 
-/* Clear the screen and initialize VIDEO, XPOS and YPOS. */
-static void cls (void) {
-    int i;
-
-    video = (unsigned char *) VIDEO;
-    
-    for (i = 0; i < COLUMNS * LINES * 2; i++) {
-        *(video + i) = 0;
+/* Create thread */
+int create_therad(void* stack, void* run) {
+    // index out of bound exception
+    if( uid > N ) {
+        return -1;
     }
-    
-    xpos = 0;
-    ypos = 0;
+    tcb[uid].sp = stack;
+    tcb[uid].tid = uid + 1;
+    tcb[uid].run = run;
+    tcb[uid].status = NEW;
+    tcb[uid].priority = 0;
+    uid = uid + 1;
+    return tcb[uid].tid;
 }
 
-void put_char(char ch) {
-    if (ch == '\n' || ch == '\r') {
-        newline();
-        return;
-    }
-
-    *(video + (xpos + ypos * COLUMNS) * 2) = ch & 0xFF;       // ASCII
-    *(video + (xpos + ypos * COLUMNS) * 2 + 1) = ATTRIBUTE;   // set up color
-
-    xpos++;
-    if (xpos >= COLUMNS) {
-        newline();
-    }       
+/* */
+void thread1_run() {
+    println("Thread<0001> is running...");
+    // print from 100 to 200
 }
 
-void newline(void) {
-    xpos = 0;
-    ypos++;
-    if (ypos >= LINES) {
-        ypos = 0;
-    }
+/* */
+void thread2_run() {
+    println("Thread<0002> is running...");
+    // print from 200 to 300
 }
 
-void put_string(char* str) {
-    multiboot_uint16_t i;
-    for( i = 0; str[i] != '\0'; i++ ) {
-        put_char(str[i]);
-    }
+/* */
+void thread3_run() {
+    println("Thread<0003> is running...");
+    // print from 300 to 400
 }
 
+/* First come first serve scheduler */
+void fifo_scheduler() {
+    // (1) context protection
+
+    // (2) tcb.status = READY
+
+    // (3) add to ready queue or this thead has been terminated
+
+    // (4) poll the first in the ready queue
+
+    // (5) context restore
+
+}

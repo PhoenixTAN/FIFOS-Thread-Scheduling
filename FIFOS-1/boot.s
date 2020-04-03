@@ -62,15 +62,15 @@ _start:
 	.long 0xE4524FFB    # Checksum
 
 real_start:
-    lgdt gdt_ptr    # load gtd table address into GDTR register
-    ljmp $0x08, $1f    # go to the kernel code segment
+    lgdt gdt_ptr        # load gtd table address into GDTR register
+    ljmp $0x08, $1f     # go to the kernel code segment
 
 1: 
     # set up kernel data segment for these registers
-    movw $0x10, %AX  
-    movw %AX, %DS      
+    movw $0x10, %AX
+    movw %AX, %DS
     movw %AX, %SS
-    movw %AX, %ES      
+    movw %AX, %ES
     movw %AX, %FS
     movw %AX, %GS
 
