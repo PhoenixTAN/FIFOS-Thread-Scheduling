@@ -6,17 +6,14 @@
 #           https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#multiboot_002eh
 # -----------------------------------------------------------------------------------------------
 
-    .globl stack
+    .global stack
 
     .bss
     .align 0x1000
     .comm stack, 0x1000     # setup 4KB stack area in bss
 
     .data
-
-    .text
-
-    .globl _start
+    .align 0x4
 
 gdt: 
     # (1) null descriptor -- 1st (Zeroth) entry not used
@@ -51,6 +48,9 @@ gdt_ptr:
     # offset: 4 bytes
     .long gdt       # linear address of the table itself
 
+.text
+.global _start
+
 _start:
 	jmp real_start
 
@@ -63,9 +63,9 @@ _start:
 
 real_start:
     lgdt gdt_ptr    # load gtd table address into GDTR register
-    ljmp $0x08, $code_segment     # go to the kernel code segment
+    ljmp $0x08, $1f    # go to the kernel code segment
 
-code_segment: 
+1: 
     # set up kernel data segment for these registers
     movw $0x10, %AX  
     movw %AX, %DS      
@@ -80,6 +80,8 @@ code_segment:
 	# save multiboot parameter, for eventual call to C code
 	pushl %EBX
 
+    # Push the magic value
+    # pushl %EAX
 	call init   # start of C code
 
 	# In case we return from the call, we want to suspend the processor

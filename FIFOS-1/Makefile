@@ -7,7 +7,7 @@ MNT_POINT=/root/mydisk
 
 all: $(PROGS)
 
-memos-2: $(OBJS)
+fifos1: $(OBJS)
 	$(LD) -m elf_i386 -T fifos1.ld -o $@ $^
 
 %: %.c

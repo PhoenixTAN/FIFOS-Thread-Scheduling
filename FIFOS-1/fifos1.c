@@ -30,54 +30,16 @@ static int ypos;
 static volatile unsigned char *video;
 
 /* Forward declarations. */
-void cmain (unsigned long magic, unsigned long addr);
+void init(multiboot_info_t* pmb);
 static void cls (void);
-void print_memory_size(multiboot_uint64_t memory_size);
-void print_memory_range(multiboot_uint64_t base_addr, multiboot_uint64_t len, multiboot_uint32_t type );
-void print_hex_string(multiboot_uint64_t data);
 void put_char(char ch);
 void put_string(char* string);
 void newline(void);
 
-
-void cmain(unsigned long magic, unsigned long addr) {
-    /* Clear the screen. */
-    cls ();
-
-    multiboot_info_t *mbi;
-
-    /* Am I booted by a Multiboot-compliant boot loader? */
-    if (magic != MULTIBOOT_BOOTLOADER_MAGIC) {
-        put_string("Invalid magic number:");
-        print_hex_string(magic);
-        put_char('\n');
-        return;
-    }
-
-    /* Set MBI to the address of the Multiboot information structure. */
-    mbi = (multiboot_info_t *) addr;
-
-    // TODO: a list of condition check
-
-    // init data
-    multiboot_memory_map_t *mmap;
-    multiboot_uint64_t memory_size = 0;
-    xpos = 0;
-    ypos = 0;
-
-    // iterate the memory map
-    for (mmap = (multiboot_memory_map_t *) mbi->mmap_addr; 
-          (unsigned long) mmap < mbi->mmap_addr + mbi->mmap_length; 
-            mmap = (multiboot_memory_map_t *) ((unsigned long) mmap + mmap->size + sizeof(mmap->size))) {       
-        // 64 bits base address, 64 bits length and 32 bits type.
-        // add up free memory
-        if (mmap->type == 1) {
-            memory_size += mmap->len;   // the size of the memory region in bytes
-        }
-        print_memory_range(mmap->addr, mmap->len, mmap->type);
-    }
-
-    print_memory_size(memory_size);
+void init(multiboot_info_t* pmb) {
+    cls();
+    put_string("FIFOS-1: Ziqi Tan, Jiaqian Sun");
+    
 }
 
 /* Clear the screen and initialize VIDEO, XPOS and YPOS. */
@@ -92,51 +54,6 @@ static void cls (void) {
     
     xpos = 0;
     ypos = 0;
-}
-
-void print_memory_size(multiboot_uint64_t memory_size) {
-    // convert memory size in B to MB
-    memory_size = memory_size >> 20;
-    put_string("MemOS 2: Welcome *** System memory is (in MB): ");
-    print_hex_string(memory_size);
-    put_char('\n');
-}
-
-void print_memory_range(multiboot_uint64_t base_addr, multiboot_uint64_t len, multiboot_uint32_t type) {
-    put_string("Address range: [");
-    print_hex_string(base_addr);
-    put_char('~');
-    print_hex_string(base_addr + len);
-    put_string("] -> ");
-    if( type == 1 ) {
-        put_string("Free memory (1)\n");
-    }
-    else if( type == 2 ) {
-        put_string("Reserved memory (2)\n");
-    }
-    else {
-        put_string("Others\n");
-    }
-}
-
-void print_hex_string(multiboot_uint64_t data) {
-    char hex_str[19];
-    hex_str[0] = '0';
-    hex_str[1] = 'x';
-    hex_str[18] = '\0';
-    multiboot_uint16_t index;
-    multiboot_uint64_t temp;
-    for( index = 17, temp = 0x0000000f; index > 1; index--, data = data >> 4 ) {
-        multiboot_uint64_t hex_number = data & temp;
-        if( hex_number > 9 ) {
-            hex_number += 87;   // convert a~f to 'a'~'f'
-        }
-        else {
-            hex_number += 48;
-        }
-        hex_str[index] = hex_number;
-    }
-    put_string(hex_str);
 }
 
 void put_char(char ch) {
