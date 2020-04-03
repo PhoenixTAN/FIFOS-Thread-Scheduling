@@ -18,7 +18,6 @@
 
     .globl _start
 
-# Need to fill in GDT
 gdt: 
     # (1) null descriptor -- 1st (Zeroth) entry not used
     .long 0
@@ -45,8 +44,9 @@ gdt:
     # (5) Other segments if needed: user-level, LDTs, TSS
 
 gdt_ptr:
-    # size: 2 bytes
-    .short 0x7FF    # length in bytes - 3 descriptors but space for 256
+    # Define the size of gdt
+    .short 0x7FF    # length in bytes - 3 descriptors but space for 256 entries
+    # Every entry is 8-byte-long. 256 entries are 0x800 bytes.
 
     # offset: 4 bytes
     .long gdt       # linear address of the table itself
@@ -62,7 +62,18 @@ _start:
 	.long 0xE4524FFB    # Checksum
 
 real_start:
-	
+    lgdt gdt_ptr    # load gtd table address into GDTR register
+    ljmp $0x08, $code_segment     # go to the kernel code segment
+
+code_segment: 
+    # set up kernel data segment for these registers
+    movw $0x10, %AX  
+    movw %AX, %DS      
+    movw %AX, %SS
+    movw %AX, %ES      
+    movw %AX, %FS
+    movw %AX, %GS
+
 	# set up stack
 	movl $stack+0x1000, %ESP # setup 4Kbyte stack
 	
@@ -74,6 +85,6 @@ real_start:
 	# In case we return from the call, we want to suspend the processor
 	
 	cli
-	hlt
+	hlt     # halts CPU until the next external interrupt is fired
 loop:
 	jmp loop
