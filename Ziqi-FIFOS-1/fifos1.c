@@ -43,6 +43,7 @@ void thread3_run();
 int fifo_scheduler();
 void delay();
 void yield();
+void thread_finish();
 
 /* entrance of the C code */
 void init(multiboot_info_t* pmb) {
@@ -58,16 +59,8 @@ void init(multiboot_info_t* pmb) {
     create_thread(&stack3[stack_size-1], thread3_run);
 
     /* schedule */
-    /*while(1) {
-        int finish = fifo_scheduler();
-        if( finish == 1 ) {
-            // the ready queue is empty
-            break;
-        }
-    }*/
     fifo_scheduler();
-    println("Scheduling ends.");
-    __asm__ volatile("hlt");
+
 }
 
 /* Create thread */
@@ -81,30 +74,31 @@ int create_thread(void* stack, void* run) {
     tcb[uid].run = run;
     tcb[uid].status = NEW;
     tcb[uid].priority = 0;
-
+    
+    // initial context
     // pushfl
     *((multiboot_uint32_t *)stack) = (multiboot_uint32_t)run;   // EIP
-    tcb[uid].sp = (multiboot_uint32_t*)stack - 11;
+    
     // FLAG里面的第1位是1，表示always 1 in EFLAGS
     // FLAG里面的第九位是0，表示disable interrupt
-    *((multiboot_uint32_t *)stack -  1) = 2;                // FLAGS
+    *((multiboot_uint32_t *)stack -  1) = 2;          // FLAG
 
-    // pushal
-    *((multiboot_uint32_t *)stack -  2) = 0;                // EAX    
-    *((multiboot_uint32_t *)stack -  3) = 0;                // ECX  
-    *((multiboot_uint32_t *)stack -  4) = 0;                // EDX  
-    *((multiboot_uint32_t *)stack -  5) = 0;                // EBX  
-    // ESP在push的过程中并不会被写入，所以不用担心
-    *((multiboot_uint32_t *)stack -  6) = 0;                // TEMP ESP 
-    *((multiboot_uint32_t *)stack -  7) = 0;                // EBP  
-    *((multiboot_uint32_t *)stack -  8) = 0;                // ESI  
-    *((multiboot_uint32_t *)stack -  9) = 0;                // EDI 
+    *((multiboot_uint32_t *)stack -  2) = 0;          // EAX    
+    *((multiboot_uint32_t *)stack -  3) = 0;          // EBX  
+    *((multiboot_uint32_t *)stack -  4) = 0;          // ECX  
+    *((multiboot_uint32_t *)stack -  5) = 0;          // EDX  
 
-    // push ds, es, fs,gs 
+    *((multiboot_uint32_t *)stack -  6) = 0;          // ESP 
+    *((multiboot_uint32_t *)stack -  7) = 0;          // EBP  
+    *((multiboot_uint32_t *)stack -  8) = 0;          // ESI  
+    *((multiboot_uint32_t *)stack -  9) = 0;          // EDI 
+
     *(((multiboot_uint16_t *)stack) -  20) = 0x10;    // DS
     *(((multiboot_uint16_t *)stack) -  21) = 0x10;    // ES
     *(((multiboot_uint16_t *)stack) -  22) = 0x10;    // FS
     *(((multiboot_uint16_t *)stack) -  23) = 0x10;    // GS
+
+    tcb[uid].sp = (multiboot_uint32_t*)stack - 11;
 
     uid++;
 
@@ -112,7 +106,13 @@ int create_thread(void* stack, void* run) {
 }
 
 void yield() {
+    en_queue(lastThread);
+    fifo_scheduler();  
+}
 
+void thread_finish() {
+    lastThread->status = TERMINATED;
+    fifo_scheduler(); 
 }
 
 /* */
@@ -120,17 +120,13 @@ void thread1_run() {
     int jobs = 2;
     while( jobs ) {
         print("Thread<0001> is running...  ");
-        // delay
         delay();
         jobs--;
-        en_queue(lastThread);
-        fifo_scheduler();   
+        yield();
     }
     
     println("Thread<0001> finished.");
-    // __asm__ volatile("hlt");  
-    lastThread->status = TERMINATED;
-    fifo_scheduler(); 
+    thread_finish();
 }
 
 /* */
@@ -138,16 +134,12 @@ void thread2_run() {
     int jobs = 4;
     while( jobs ) {
         print("Thread<0002> is running...  ");
-        // delay
         delay();
         jobs--;
-        en_queue(lastThread);
-        fifo_scheduler();   
+        yield(); 
     }
-    println("");
     println("Thread<0002> finished.");
-    lastThread->status = TERMINATED;
-    fifo_scheduler(); 
+    thread_finish();
 }
 
 /* */
@@ -158,13 +150,10 @@ void thread3_run() {
         // delay
         delay();
         jobs--;
-        en_queue(lastThread);
-        fifo_scheduler();   
+        yield();  
     }
-    println("");
     println("Thread<0003> finished.");
-    lastThread->status = TERMINATED;
-    fifo_scheduler(); 
+    thread_finish();
 }
 
 /* First come first serve scheduler */
@@ -182,7 +171,8 @@ int fifo_scheduler() {
     // (2) ready queue is empty
     if( isEmpty() == 1 ) {
         println("Ready queue is empty.");
-        __asm__ volatile("hlt");
+        println("Schedule ends.");
+        __asm__ volatile("jmp schedule_finish");
         return 1;
     }
 
@@ -193,20 +183,15 @@ int fifo_scheduler() {
     // use asm to switch
     if( lastThread == (void*)0 || lastThread->status == TERMINATED ) {
         lastThread = nextThread;
-        __asm__ volatile("call switch_to"::"S"(0), "D"(nextThread));
+        __asm__ volatile("call context_protection"::"S"(0), "D"(nextThread));
     }
     else {
         TCB* temp = lastThread;
-        /*if(lastThread->status == TERMINATED ) {
-
-        }*/
         lastThread = nextThread;
-        println("Go back to scheduler");
-        // __asm__ volatile("hlt");
-        __asm__ volatile("call switch_to"::"S"(temp), "D"(nextThread));
+        println("Go back to scheduler...");
+        __asm__ volatile("call context_protection"::"S"(temp), "D"(nextThread));
+        // "S": ESI, "D": EDI
     }
-    
-    // nextThread->status = TERMINATED;
 
     return 0;
 }
@@ -258,7 +243,7 @@ int isFull() {
 void delay() {
     int i, j;
     for( i = 0; i < 10000; i++ ) {
-        for( j = 0; j < 40000; j++ ) {
+        for( j = 0; j < 30000; j++ ) {
 
         }
     }

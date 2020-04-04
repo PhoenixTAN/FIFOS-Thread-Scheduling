@@ -17,6 +17,6 @@ install: $(PROGS)
 	sync
 
 clean:
-	-rm *.o *.d $(PROGS) *~
+	-rm *.o *.d $(PROGS)
 
 -include *.d
