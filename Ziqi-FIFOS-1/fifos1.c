@@ -71,12 +71,18 @@ int create_thread(void* stack, void* run) {
     if( uid > N ) {
         return -1;
     }
-    tcb[uid].sp = stack;
+    tcb[uid].sp = (multiboot_uint32_t*)stack;
     tcb[uid].tid = uid + 1;
     tcb[uid].run = run;
     tcb[uid].status = NEW;
     tcb[uid].priority = 0;
+
+    *((multiboot_uint32_t *)stack) = (multiboot_uint32_t)run;
+
+    
+
     uid = uid + 1;
+
     return tcb[uid].tid;
 }
 
@@ -122,7 +128,7 @@ int fifo_scheduler() {
         return 1;
     }
 
-    println("Ready queue is not empty.");
+    // (3) Run the next thread
     TCB* nextThread = de_queue();
     nextThread->status = RUNNING;
     (*(nextThread->run))();
