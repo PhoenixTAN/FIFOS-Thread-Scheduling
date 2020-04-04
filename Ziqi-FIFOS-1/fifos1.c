@@ -117,7 +117,7 @@ void yield() {
 
 /* */
 void thread1_run() {
-    int jobs = 3;
+    int jobs = 2;
     while( jobs ) {
         print("Thread<0001> is running...  ");
         // delay
@@ -126,9 +126,11 @@ void thread1_run() {
         en_queue(lastThread);
         fifo_scheduler();   
     }
-    // __asm__ volatile("hlt");  
-    println("");
+    
     println("Thread<0001> finished.");
+    // __asm__ volatile("hlt");  
+    lastThread->status = TERMINATED;
+    fifo_scheduler(); 
 }
 
 /* */
@@ -144,6 +146,8 @@ void thread2_run() {
     }
     println("");
     println("Thread<0002> finished.");
+    lastThread->status = TERMINATED;
+    fifo_scheduler(); 
 }
 
 /* */
@@ -159,6 +163,8 @@ void thread3_run() {
     }
     println("");
     println("Thread<0003> finished.");
+    lastThread->status = TERMINATED;
+    fifo_scheduler(); 
 }
 
 /* First come first serve scheduler */
@@ -176,6 +182,7 @@ int fifo_scheduler() {
     // (2) ready queue is empty
     if( isEmpty() == 1 ) {
         println("Ready queue is empty.");
+        __asm__ volatile("hlt");
         return 1;
     }
 
@@ -184,19 +191,22 @@ int fifo_scheduler() {
     nextThread->status = RUNNING;
     // (*(nextThread->run))();
     // use asm to switch
-    if( lastThread == (void*)0 ) {
+    if( lastThread == (void*)0 || lastThread->status == TERMINATED ) {
         lastThread = nextThread;
         __asm__ volatile("call switch_to"::"S"(0), "D"(nextThread));
     }
     else {
         TCB* temp = lastThread;
+        /*if(lastThread->status == TERMINATED ) {
+
+        }*/
         lastThread = nextThread;
         println("Go back to scheduler");
         // __asm__ volatile("hlt");
         __asm__ volatile("call switch_to"::"S"(temp), "D"(nextThread));
     }
     
-    nextThread->status = TERMINATED;
+    // nextThread->status = TERMINATED;
 
     return 0;
 }
@@ -248,7 +258,7 @@ int isFull() {
 void delay() {
     int i, j;
     for( i = 0; i < 10000; i++ ) {
-        for( j = 0; j < 50000; j++ ) {
+        for( j = 0; j < 40000; j++ ) {
 
         }
     }
