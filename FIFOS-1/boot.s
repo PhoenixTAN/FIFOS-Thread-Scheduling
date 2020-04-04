@@ -50,6 +50,9 @@ gdt_ptr:
 
 .text
 .global _start
+.global switch_to
+.global create
+.global finish_loop
 
 _start:
 	jmp real_start
@@ -88,5 +91,5 @@ real_start:
 	
 	cli
 	hlt     # halts CPU until the next external interrupt is fired
-loop:
-	jmp loop
+finish_loop:
+	jmp finish_loop
