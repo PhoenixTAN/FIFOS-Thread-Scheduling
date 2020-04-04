@@ -19,12 +19,12 @@ static TCB tcb[N];
 static int uid = 0;     // counter
 
 /* data structure and operationg for ready queue */
-static int ready_queue[ready_queue_size];
+static TCB* ready_queue[ready_queue_size];
 static int head;
 static int tail;
 void init_ready_queue();
-int en_queue(int tid);
-int de_queue();
+int en_queue(TCB* tcb);
+TCB* de_queue();
 int isEmpty();
 int isFull();
 
@@ -35,7 +35,7 @@ multiboot_uint32_t stack3[stack_size];
 
 /* Forward declarations. */
 void init(multiboot_info_t* pmb);       
-int thread_create(void* stack, void* run);
+int create_thread(void* stack, void* run);
 void thread1_run();
 void thread2_run();
 void thread3_run();
@@ -50,9 +50,9 @@ void init(multiboot_info_t* pmb) {
     init_ready_queue();
 
     /* create threads */
-    create_therad(&stack1[stack_size-1], thread1_run);
-    create_therad(&stack2[stack_size-1], thread2_run);
-    create_therad(&stack3[stack_size-1], thread3_run);
+    create_thread(&stack1[stack_size-1], thread1_run);
+    create_thread(&stack2[stack_size-1], thread2_run);
+    create_thread(&stack3[stack_size-1], thread3_run);
 
     /* schedule */
     while(1) {
@@ -62,11 +62,11 @@ void init(multiboot_info_t* pmb) {
             break;
         }
     }
-    
+    println("Scheduling ends.");
 }
 
 /* Create thread */
-int create_therad(void* stack, void* run) {
+int create_thread(void* stack, void* run) {
     // index out of bound exception
     if( uid > N ) {
         return -1;
@@ -84,17 +84,15 @@ int create_therad(void* stack, void* run) {
 void thread1_run() {
     println("");
     println("Thread<0001> is running...");
+    println("");
     // print from 100 to 200
-    int i;
-    for( i = 100; i <= 200; i++ ) {
-        
-    }
 }
 
 /* */
 void thread2_run() {
     println("");
     println("Thread<0002> is running...");
+    println("");
     // print from 200 to 300
 }
 
@@ -102,35 +100,33 @@ void thread2_run() {
 void thread3_run() {
     println("");
     println("Thread<0003> is running...");
+    println("");
     // print from 300 to 400
 }
 
 /* First come first serve scheduler */
 int fifo_scheduler() {
-    // (1) add all NEW threads into ready queue
+
+    // (1) add all NEW threads into ready queue.
     int i;
     for( i = 0; i < N; i++ ) {
         if( tcb[i].status == NEW ) {
-            en_queue(tcb[i].tid);
+            en_queue(&tcb[i]);
+            tcb[i].status = READY;
         }
     }
 
-    // (2) run the thread in the head of the ready queue
-
-    // (3) interleave and context protection
-
-    // (3) tcb.status = READY
-
-    // (4) add to ready queue or this thead has been terminated
-
-    // (5) poll the first in the ready queue
-
-    // (6) context restore
-
-    // (7) ready queue is empty
+    // (2) ready queue is empty
     if( isEmpty() == 1 ) {
+        println("Ready queue is empty.");
         return 1;
     }
+
+    println("Ready queue is not empty.");
+    TCB* nextThread = de_queue();
+    nextThread->status = RUNNING;
+    (*(nextThread->run))();
+    nextThread->status = TERMINATED;
 
     return 0;
 }
@@ -142,30 +138,30 @@ void init_ready_queue() {
 }
 
 /* add */
-int en_queue(int tid) {
+int en_queue(TCB* tcb) {
     if( isFull() == 1 ) {
         return -1;
     }
-    ready_queue[tail] = tid;
+    ready_queue[tail] = tcb;
     tail = (tail + 1) % ready_queue_size;
-    println("en_queue");
+    // println("en_queue");
     return 0;
 }
 
 /* poll */
-int de_queue() {
+TCB* de_queue() {
     if( isEmpty() == 1 ) {
-        return -1;
+        return (void*)0;
     }
-    int res = ready_queue[head];
+    TCB* tcb = ready_queue[head];
     head = (head + 1) % ready_queue_size;
-    println("de_queue");
-    return res;
+    // println("de_queue");
+    return tcb;
 }
 
 /* isEmpty */
 int isEmpty() {
-    if(head == tail ) {
+    if(head == tail) {
         return 1;
     }
     return -1;
