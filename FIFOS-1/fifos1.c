@@ -19,8 +19,10 @@ static int uid = 0;     // counter
 
 /* Private stack for threads */
 multiboot_uint32_t stack1[stack_size];
-multiboot_uint32_t stack2[stack_size;
+multiboot_uint32_t stack2[stack_size];
 multiboot_uint32_t stack3[stack_size];
+
+multiboot_uint32_t main_thread_stack[stack_size];
 
 /* Forward declarations. */
 void init(multiboot_info_t* pmb);       /* entrance of the C code */
@@ -29,16 +31,24 @@ void thread1_run();
 void thread2_run();
 void thread3_run();
 void fifo_scheduler();
+void thread_exit();
+void thread_yeild();
+void create_main_thread(void* stack);
 
 void init(multiboot_info_t* pmb) {
     cls();
     println("FIFOS-1: Ziqi Tan, Jiaqian Sun");
     println("First come first serve thread scheduler:");
     
+    /* create main thread */
+    create_main_thread(&main_thread_stack[stack_size-1]);
+
     /* create threads */
-    create_therad(&stack1[stack_size-1], thread1_run);
+    create_therad(&stack1[stack_size-1], thread1_run); //要加入thread_exit方法的地址
     create_therad(&stack2[stack_size-1], thread2_run);
     create_therad(&stack3[stack_size-1], thread3_run);
+
+    println("In the end");
 }
 
 /* Create thread */
@@ -51,9 +61,13 @@ int create_therad(void* stack, void* run) {
     tcb[uid].tid = uid + 1;
     tcb[uid].run = run;
     tcb[uid].status = NEW;
-    tcb[uid].priority = 0;
+    tcb[uid].priority = 0; 
     uid = uid + 1;
     return tcb[uid].tid;
+}
+
+void create_main_thread(void* stack) {
+    __asm__ volatile("movl %0, %%esp" : "=r"(stack)); //move stack pointer to sp register
 }
 
 /* */
@@ -85,5 +99,14 @@ void fifo_scheduler() {
     // (4) poll the first in the ready queue
 
     // (5) context restore
+
+}
+
+// 当一个线程结束时调用的方法
+void thread_exit() {
+
+}
+
+void thread_yeild() {
 
 }
