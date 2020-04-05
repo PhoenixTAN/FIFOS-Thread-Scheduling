@@ -99,3 +99,6 @@ Every segment register has a “visible” part and a “hidden” part. (The hi
 
 ![alt text](./images/GDT-LDT.png)
 
+![alt text](./images/ldt-gdt.jpg)
+## Overview
+![alt text](./images/System-Level.png)
