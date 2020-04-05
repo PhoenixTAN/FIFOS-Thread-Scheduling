@@ -40,10 +40,14 @@ int create_thread(void* stack, void* run);
 void thread1_run();
 void thread2_run();
 void thread3_run();
-int fifo_scheduler();
 void delay();
+
+int fifo_scheduler();
 void yield();
 void thread_finish();
+void get_threads_ready();
+TCB* get_next_thread();
+void switch_thread();
 
 /* entrance of the C code */
 void init(multiboot_info_t* pmb) {
@@ -147,13 +151,7 @@ void thread3_run() {
 int fifo_scheduler() {
 
     // (1) add all NEW threads into ready queue.
-    int i;
-    for( i = 0; i < N; i++ ) {
-        if( tcb[i].status == NEW ) {
-            en_queue(&tcb[i]);
-            tcb[i].status = READY;
-        }
-    }
+    get_threads_ready();
 
     // (2) ready queue is empty
     if( isEmpty() == 1 ) {
@@ -163,25 +161,46 @@ int fifo_scheduler() {
         return 1;
     }
 
-    // (3) Run the next thread
-    TCB* nextThread = de_queue();
+    // (3) Find the next thread
+    TCB* nextThread = get_next_thread();
     
-    // use asm to switch
+    // (4) use asm to switch thread
+    switch_thread(nextThread);
+    
+    return 0;
+}
+
+/* add new threads into ready queue */
+void get_threads_ready() {
+    int i;
+    for( i = 0; i < N; i++ ) {
+        if( tcb[i].status == NEW ) {
+            en_queue(&tcb[i]);
+            tcb[i].status = READY;
+        }
+    }
+}
+
+/* get next thread from the ready queue */
+TCB* get_next_thread() {
+    return de_queue();
+}
+
+/* switch from last*/
+void switch_thread(TCB* nextThread) {
     if( lastThread == (void*)0 || lastThread->status == TERMINATED ) {
         lastThread = nextThread;
         nextThread->status = RUNNING;
         __asm__ volatile("call context_retrieve"::"D"(nextThread));
     }
     else {
-        TCB* temp = lastThread;
-        lastThread = nextThread;
+        TCB* temp = lastThread;     // record last thread
+        lastThread = nextThread;    // update last thread
         nextThread->status = RUNNING;
         println("Go back to scheduler...");
         __asm__ volatile("call context_protection"::"S"(temp), "D"(nextThread));
         // "S": ESI, "D": EDI
     }
-
-    return 0;
 }
 
 /* Opeartions for ready queue */
