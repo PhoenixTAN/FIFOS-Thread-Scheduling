@@ -61,4 +61,11 @@ Writable bit for data selectors: Whether write access for this segment is allowe
 - Gr: Granularity bit. If 0 the limit is in 1 B blocks (byte granularity), if 1 the limit is in 4 KiB blocks (page granularity).
 - Sz: Size bit. If 0 the selector defines 16 bit protected mode. If 1 it defines 32 bit protected mode. You can have both 16 bit and 32 bit selectors at once.
 
-## Intel Manual
+## Intel 64 and IA-32 Architectures Software Developer's Manual
+### Volume 3 --- System Programming Guide
+#### Chapter 3 --- Protected-Mode Memory Management
+
+## Segmentation and Paging
+![alt text](./images/segmentation-paging.png)
+
+
