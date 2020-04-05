@@ -35,7 +35,7 @@ multiboot_uint32_t stack2[stack_size];
 multiboot_uint32_t stack3[stack_size];
 
 /* Forward declarations. */
-void init(multiboot_info_t* pmb);       
+void init(multiboot_info_t* pmb);
 int create_thread(void* stack, void* run);
 void thread1_run();
 void thread2_run();
@@ -60,7 +60,6 @@ void init(multiboot_info_t* pmb) {
 
     /* schedule */
     fifo_scheduler();
-
 }
 
 /* Create thread */
@@ -76,30 +75,22 @@ int create_thread(void* stack, void* run) {
     tcb[uid].priority = 0;
     
     // initial context
-    // pushfl
     *((multiboot_uint32_t *)stack) = (multiboot_uint32_t)run;   // EIP
     
-    // FLAG里面的第1位是1，表示always 1 in EFLAGS
-    // FLAG里面的第九位是0，表示disable interrupt
+    // FLAG[1] 1，always 1 in EFLAGS
+    // FLAG[9] 0，disable interrupt
     *((multiboot_uint32_t *)stack -  1) = 2;          // FLAG
+    *((multiboot_uint32_t *)stack -  2) = 0;          // EAX   
+    *((multiboot_uint32_t *)stack -  3) = 0;          // EBX 
+    *((multiboot_uint32_t *)stack -  4) = 0;          // ECX 
+    *((multiboot_uint32_t *)stack -  5) = 0;          // EDX
+    *((multiboot_uint32_t *)stack -  6) = 0;          // ESP
+    *((multiboot_uint32_t *)stack -  7) = 0;          // EBP 
+    *((multiboot_uint32_t *)stack -  8) = 0;          // ESI 
+    *((multiboot_uint32_t *)stack -  9) = 0;          // EDI
 
-    *((multiboot_uint32_t *)stack -  2) = 0;          // EAX    
-    *((multiboot_uint32_t *)stack -  3) = 0;          // EBX  
-    *((multiboot_uint32_t *)stack -  4) = 0;          // ECX  
-    *((multiboot_uint32_t *)stack -  5) = 0;          // EDX  
-
-    *((multiboot_uint32_t *)stack -  6) = 0;          // ESP 
-    *((multiboot_uint32_t *)stack -  7) = 0;          // EBP  
-    *((multiboot_uint32_t *)stack -  8) = 0;          // ESI  
-    *((multiboot_uint32_t *)stack -  9) = 0;          // EDI 
-
-    *(((multiboot_uint16_t *)stack) -  20) = 0x10;    // DS
-    *(((multiboot_uint16_t *)stack) -  21) = 0x10;    // ES
-    *(((multiboot_uint16_t *)stack) -  22) = 0x10;    // FS
-    *(((multiboot_uint16_t *)stack) -  23) = 0x10;    // GS
-
-    tcb[uid].sp = (multiboot_uint32_t*)stack - 11;
-
+    // update the stack pointer at one time
+    tcb[uid].sp = (multiboot_uint32_t*)stack - 9;
     uid++;
 
     return tcb[uid].tid;
@@ -115,7 +106,6 @@ void thread_finish() {
     fifo_scheduler(); 
 }
 
-/* */
 void thread1_run() {
     int jobs = 2;
     while( jobs ) {
@@ -124,12 +114,10 @@ void thread1_run() {
         jobs--;
         yield();
     }
-    
     println("Thread<0001> finished.");
     thread_finish();
 }
 
-/* */
 void thread2_run() {
     int jobs = 4;
     while( jobs ) {
@@ -142,7 +130,6 @@ void thread2_run() {
     thread_finish();
 }
 
-/* */
 void thread3_run() {
     int jobs = 5;
     while( jobs ) {
@@ -178,16 +165,17 @@ int fifo_scheduler() {
 
     // (3) Run the next thread
     TCB* nextThread = de_queue();
-    nextThread->status = RUNNING;
-    // (*(nextThread->run))();
+    
     // use asm to switch
     if( lastThread == (void*)0 || lastThread->status == TERMINATED ) {
         lastThread = nextThread;
-        __asm__ volatile("call context_protection"::"S"(0), "D"(nextThread));
+        nextThread->status = RUNNING;
+        __asm__ volatile("call context_retrieve"::"D"(nextThread));
     }
     else {
         TCB* temp = lastThread;
         lastThread = nextThread;
+        nextThread->status = RUNNING;
         println("Go back to scheduler...");
         __asm__ volatile("call context_protection"::"S"(temp), "D"(nextThread));
         // "S": ESI, "D": EDI
@@ -209,7 +197,6 @@ int en_queue(TCB* tcb) {
     }
     ready_queue[tail] = tcb;
     tail = (tail + 1) % ready_queue_size;
-    // println("en_queue");
     return 0;
 }
 
@@ -220,7 +207,6 @@ TCB* de_queue() {
     }
     TCB* tcb = ready_queue[head];
     head = (head + 1) % ready_queue_size;
-    // println("de_queue");
     return tcb;
 }
 
@@ -244,7 +230,6 @@ void delay() {
     int i, j;
     for( i = 0; i < 10000; i++ ) {
         for( j = 0; j < 30000; j++ ) {
-
         }
     }
 }
