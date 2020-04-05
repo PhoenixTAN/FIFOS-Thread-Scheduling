@@ -36,15 +36,11 @@ qemu-system-i386 disk.img
    4. set up thread status as NEW.
    5. Set up **initial context in stack**.
 5. call scheduler().
-   1. Add all NEW theads into the ready queue.
-   2. If the ready queue is empty, program ends.
-   3. Get the first thread in the ready queue and execute.
-   4. Context protection:
-      1. Move the stack pointer of the **last thread** into **%ESI**.
-      2. Move the stack pointer of the **next thread** into **%EDI**.
-      3. push current registers into stack.
-      4. pop registers for the next thread.
-   5. Thread is running and then **yield()**.
-      1. yield() adds the thread itself back to ready queue.
-      2. Then, recursively call scheduler().
-   6. 
+
+## Context protection and retrieve
+In our implementation, we cannot directly modify the **IP** register, thus we recursively call the scheduler().
+
+### Trick
+When a thread is called for the first time, when a **ret** happens: **IP=SS:SP**. What we only need to do is make SP (stack pointer) to the **thread_run()** function.
+
+And then every threads will be scheduled in a certain flow. We don't need to manually protect the **IP** register. We still need to take care of general registers and the flag register.

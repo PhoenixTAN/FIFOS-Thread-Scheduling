@@ -81,13 +81,10 @@ real_start:
 	# save multiboot parameter, for eventual call to C code
 	pushl %EBX
 
-    # Push the magic value
-    # pushl %EAX
 	call init   # start of C code
 
 	# In case we return from the call, we want to suspend the processor
 schedule_finish:	
 	cli
 	hlt     # halts CPU until the next external interrupt is fired
-loop:
-	jmp loop
+
