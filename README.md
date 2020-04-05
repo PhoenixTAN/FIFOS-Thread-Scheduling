@@ -38,7 +38,7 @@ You should start by implementing threads that run to completion in a **non-preem
 ### Second step: Stack.
 If you complete the first step, you should try to add support for threads with their own **stacks**, so they can operate on local variables and/or **call other functions**. Here, you need to create a region of memory to act as a stack for each thread, and then you need to set the stack pointer to reference the stack when setting up the execution context for the next thread to run.
 
-![alt text](./images/registers.png)
+![alt text](./images/Registers.png)
 ![alt text](./images/flag-register.png)
 
 ### Third step: Preemption.
