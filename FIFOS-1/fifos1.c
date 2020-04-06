@@ -7,7 +7,6 @@
 #include "multiboot.h"
 #include "thread.h"
 #include "print.h"
-// #include "schedule.h"
 
 /* Macros. */
 /* The number of threads */ 
@@ -18,8 +17,7 @@
 /* Variables */
 static TCB tcb[N];
 static int uid = 0;     // counter
-static int curUid = -1;
-static int callMainThreadTime = 0;
+static TCB* lastThread = (void*)0;
 
 /* data structure and operationg for ready queue */
 static TCB* ready_queue[ready_queue_size];
@@ -36,162 +34,199 @@ multiboot_uint32_t stack1[stack_size];
 multiboot_uint32_t stack2[stack_size];
 multiboot_uint32_t stack3[stack_size];
 
-multiboot_uint32_t main_thread_stack[stack_size];
+multiboot_uint32_t main_stack[stack_size];
+void* main_stack_ptr = &main_stack[stack_size - 1];
+void (*fifo_scheduler_ptr)() = &fifo_scheduler;
 
 /* Forward declarations. */
 void init(multiboot_info_t* pmb);       
-int thread_create(void* stack, void* run);
+int create_thread(void* stack, void* run);
+int create_main_thread(void* stack, void* run)
 void thread1_run();
 void thread2_run();
 void thread3_run();
-void fifo_scheduler();
-void thread_exit();
-void thread_yeild();
-void create_main_thread(void* stack, void* run);
+int fifo_scheduler();
+void delay();
+void yield();
+void thread_finish();
 
 /* entrance of the C code */
 void init(multiboot_info_t* pmb) {
     cls();
     println("FIFOS-1: Ziqi Tan, Jiaqian Sun");
     println("First come first serve thread scheduler:");
-    
-    /* create main thread */
-    create_main_thread(&main_thread_stack[stack_size-1], fifo_scheduler);
 
     init_ready_queue();
 
     /* create threads */
-    create_therad(&stack1[stack_size-1], thread1_run);
-    create_therad(&stack2[stack_size-1], thread2_run);
-    create_therad(&stack3[stack_size-1], thread3_run);
+    create_thread(&stack1[stack_size-1], thread1_run);
+    create_thread(&stack2[stack_size-1], thread2_run);
+    create_thread(&stack3[stack_size-1], thread3_run);
+    create_main_thread(main_stack_ptr, fifo_scheduler_ptr);
 
+    /* schedule */
     fifo_scheduler();
+
+}
+
+void create_main_thread(void* stack, void* run) {
+    *((multiboot_uint32_t *)stack) = (multiboot_uint32_t)run;   // EIP
+    
+    // FLAG里面的第1位是1，表示always 1 in EFLAGS
+    // FLAG里面的第九位是0，表示disable interrupt
+    *((multiboot_uint32_t *)stack -  1) = 2;          // FLAG
+
+    *((multiboot_uint32_t *)stack -  2) = 0;          // EAX    
+    *((multiboot_uint32_t *)stack -  3) = 0;          // EBX  
+    *((multiboot_uint32_t *)stack -  4) = 0;          // ECX  
+    *((multiboot_uint32_t *)stack -  5) = 0;          // EDX  
+
+    *((multiboot_uint32_t *)stack -  6) = 0;          // ESP 
+    *((multiboot_uint32_t *)stack -  7) = 0;          // EBP  
+    *((multiboot_uint32_t *)stack -  8) = 0;          // ESI  
+    *((multiboot_uint32_t *)stack -  9) = 0;          // EDI 
+
+    *(((multiboot_uint16_t *)stack) -  20) = 0x10;    // DS
+    *(((multiboot_uint16_t *)stack) -  21) = 0x10;    // ES
+    *(((multiboot_uint16_t *)stack) -  22) = 0x10;    // FS
+    *(((multiboot_uint16_t *)stack) -  23) = 0x10;    // GS
+
+    tcb[uid].sp = (multiboot_uint32_t*)stack - 11;
 }
 
 /* Create thread */
-int create_therad(void* stack, void* run) {
+int create_thread(void* stack, void* run) {
     // index out of bound exception
     if( uid > N ) {
         return -1;
     }
-    tcb[uid].sp = (multiboot_uint32_t)stack;
+    tcb[uid].sp = (multiboot_uint32_t*)stack;
     tcb[uid].tid = uid + 1;
     tcb[uid].run = run;
     tcb[uid].status = NEW;
     tcb[uid].priority = 0;
-    *((multiboot_uint32_t *)stack) = (multiboot_uint32_t)run;
-    // *((multiboot_uint32_t *)stack -  1) = 2;
-    en_queue(&tcb[uid]);
-    uid = uid + 1;
+    
+    // initial context
+    // pushfl
+    *((multiboot_uint32_t *)stack) = (multiboot_uint32_t)run;   // EIP
+    
+    // FLAG里面的第1位是1，表示always 1 in EFLAGS
+    // FLAG里面的第九位是0，表示disable interrupt
+    *((multiboot_uint32_t *)stack -  1) = 2;          // FLAG
+
+    *((multiboot_uint32_t *)stack -  2) = 0;          // EAX    
+    *((multiboot_uint32_t *)stack -  3) = 0;          // EBX  
+    *((multiboot_uint32_t *)stack -  4) = 0;          // ECX  
+    *((multiboot_uint32_t *)stack -  5) = 0;          // EDX  
+
+    *((multiboot_uint32_t *)stack -  6) = 0;          // ESP 
+    *((multiboot_uint32_t *)stack -  7) = 0;          // EBP  
+    *((multiboot_uint32_t *)stack -  8) = 0;          // ESI  
+    *((multiboot_uint32_t *)stack -  9) = 0;          // EDI 
+
+    *(((multiboot_uint16_t *)stack) -  20) = 0x10;    // DS
+    *(((multiboot_uint16_t *)stack) -  21) = 0x10;    // ES
+    *(((multiboot_uint16_t *)stack) -  22) = 0x10;    // FS
+    *(((multiboot_uint16_t *)stack) -  23) = 0x10;    // GS
+
+    tcb[uid].sp = (multiboot_uint32_t*)stack - 11;
+
+    uid++;
+
     return tcb[uid].tid;
 }
 
-//Use to create the main thread, the pointer of fifo_scheduler will be push into its stack, during the switch context, we call ret in the 
-//assembly to call the fifo_scheduler function.
-void create_main_thread(void* stack, void* run) {
-    *((multiboot_uint32_t *)stack) = (multiboot_uint32_t)run;
-    // *((multiboot_uint32_t *)stack -  1) = 2;
+void yield() {
+    en_queue(lastThread);
+    fifo_scheduler();  
+}
+
+void thread_finish() {
+    lastThread->status = TERMINATED;
+    fifo_scheduler(); 
 }
 
 /* */
 void thread1_run() {
-    int i = 6;
-    while(i >= 0) {
-        println("Thread<0001> is running...");
-        i--;
-        thread_yeild();
+    int jobs = 2;
+    while( jobs ) {
+        print("Thread<0001> is running...  ");
+        delay();
+        jobs--;
+        yield();
     }
-    thread_exit();
-    // print from 100 to 200
+    
+    println("Thread<0001> finished.");
+    thread_finish();
 }
 
 /* */
 void thread2_run() {
-    int i = 6;
-    while(i >= 0) {
-        println("Thread<0002> is running...");
-        i--;
-        thread_yeild();
+    int jobs = 4;
+    while( jobs ) {
+        print("Thread<0002> is running...  ");
+        delay();
+        jobs--;
+        yield(); 
     }
-    thread_exit();
-    // print from 200 to 300
+    println("Thread<0002> finished.");
+    thread_finish();
 }
 
 /* */
 void thread3_run() {
-    int i = 6;
-    while(i >= 0) {
-        println("Thread<0003> is running...");
-        i--;
-        thread_yeild();
+    int jobs = 5;
+    while( jobs ) {
+        print("Thread<0003> is running...  ");
+        // delay
+        delay();
+        jobs--;
+        yield();  
     }
-    thread_exit();
-    // print from 300 to 400
+    println("Thread<0003> finished.");
+    thread_finish();
 }
 
 /* First come first serve scheduler */
-void fifo_scheduler() {
-    // (1) context protection
+int fifo_scheduler() {
 
-    // (2) tcb.status = READY
+    // (1) add all NEW threads into ready queue.
+    int i;
+    for( i = 0; i < N; i++ ) {
+        if( tcb[i].status == NEW ) {
+            en_queue(&tcb[i]);
+            tcb[i].status = READY;
+        }
+    }
 
-    // (3) add to ready queue or this thead has been terminated
+    // (2) ready queue is empty
+    if( isEmpty() == 1 ) {
+        println("Ready queue is empty.");
+        println("Schedule ends.");
+        __asm__ volatile("jmp schedule_finish");
+        return 1;
+    }
 
-    // (4) poll the first in the ready queue
-
-    // (5) context restore
-    println("scheduler start");
-    if(!isEmpty()) {
-        TCB *ptr = de_queue();
-        if(curUid == -1 && (*ptr).status == TERMINATED) {
-            __asm__ volatile("call switch_to"::"S"(0), "D"(ptr));
-        }
-        else if(curUid != -1 && (*ptr).status == TERMINATED) {
-            __asm__ volatile("call switch_to"::"S"(&tcb[curUid]), "D"(ptr));
-        }
-        if(curUid == -1 && (*ptr).status == NEW) {
-            __asm__ volatile("call create"::"S"(0), "D"(ptr));
-        }
-        else if(curUid != -1 && (*ptr).status == NEW) {
-            __asm__ volatile("call create"::"S"(&tcb[curUid]), "D"(ptr));
-        }
-        curUid = (*ptr).tid;
-        (*ptr).status = RUNNING;
+    // (3) Run the next thread
+    TCB* nextThread = de_queue();
+    nextThread->status = RUNNING;
+    // (*(nextThread->run))();
+    // use asm to switch
+    if( lastThread == (void*)0 || lastThread->status == TERMINATED ) {
+        lastThread = nextThread;
+        __asm__ volatile("call context_protection"::"S"(0), "D"(nextThread));
     }
     else {
-        println("In the end");
-        __asm__ volatile("jmp finish_loop");
+        TCB* temp = lastThread;
+        lastThread = nextThread;
+        println("Go back to scheduler...");
+        __asm__ volatile("call context_protection"::"S"(temp), "D"(nextThread));
+        // "S": ESI, "D": EDI
     }
-}
-// 当一个线程结束时调用的方法
-void thread_exit() {
-    TCB *ptr = &tcb[curUid];
-    (*ptr).status = TERMINATED;
-    if(callMainThreadTime == 0) {
-        callMainThreadTime++;
-        // switch the context between current thread and main thread
-        __asm__ volatile("call create"::"S"(ptr), "D"(main_thread_stack[stack_size - 1]));
-    }
-    else {
-        __asm__ volatile("call switch_to"::"S"(ptr), "D"(main_thread_stack[stack_size - 1]));
-    }
+
+    return 0;
 }
 
-void thread_yeild() {
-    TCB *ptr = &tcb[curUid];
-    (*ptr).status = BLOCK;
-    println("after block");
-    en_queue(ptr);
-    if(callMainThreadTime == 0) {
-        callMainThreadTime++;
-        println("before switch");
-        __asm__ volatile("call create"::"S"(0), "D"(main_thread_stack[stack_size - 1]));
-        println("after switch");
-    }
-    else {
-        __asm__ volatile("call switch_to"::"S"(ptr), "D"(main_thread_stack[stack_size - 1]));
-    }
-}
 /* Opeartions for ready queue */
 void init_ready_queue() {
     head = 0;
@@ -205,27 +240,27 @@ int en_queue(TCB* tcb) {
     }
     ready_queue[tail] = tcb;
     tail = (tail + 1) % ready_queue_size;
-    println("en_queue");
+    // println("en_queue");
     return 0;
 }
 
 /* poll */
 TCB* de_queue() {
     if( isEmpty() == 1 ) {
-        return -1;
+        return (void*)0;
     }
-    TCB* res = ready_queue[head];
+    TCB* tcb = ready_queue[head];
     head = (head + 1) % ready_queue_size;
-    println("de_queue");
-    return res;
+    // println("de_queue");
+    return tcb;
 }
 
 /* isEmpty */
 int isEmpty() {
-    if(head == tail ) {
+    if(head == tail) {
         return 1;
     }
-    return 0;
+    return -1;
 }
 
 /* isFull */
@@ -233,5 +268,14 @@ int isFull() {
      if ((tail + 1) % ready_queue_size == head ) {
          return 1;
      }
-     return 0;
+     return -1;
+}
+
+void delay() {
+    int i, j;
+    for( i = 0; i < 10000; i++ ) {
+        for( j = 0; j < 30000; j++ ) {
+
+        }
+    }
 }

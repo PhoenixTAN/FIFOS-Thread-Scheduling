@@ -50,9 +50,7 @@ gdt_ptr:
 
 .text
 .global _start
-.global switch_to
-.global create
-.global finish_loop
+.global schedule_finish
 
 _start:
 	jmp real_start
@@ -88,8 +86,8 @@ real_start:
 	call init   # start of C code
 
 	# In case we return from the call, we want to suspend the processor
-	
+schedule_finish:	
 	cli
 	hlt     # halts CPU until the next external interrupt is fired
-finish_loop:
-	jmp finish_loop
+loop:
+	jmp loop
