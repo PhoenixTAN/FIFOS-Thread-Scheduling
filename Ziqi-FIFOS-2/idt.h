@@ -35,7 +35,7 @@ void init_idt() {
     multiboot_uint64_t IDTR = (multiboot_uint64_t)base << 16 | length;
 
     // load IDTR
-    __asm__ __volatile__ ("lidt %0"::"m"(IDTR)); 
+    __asm__ __volatile__ ("lidt %0"::"m"(IDTR));
 
 }
 

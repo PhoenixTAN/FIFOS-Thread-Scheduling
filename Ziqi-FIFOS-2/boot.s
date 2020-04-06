@@ -77,9 +77,6 @@ _start:
 real_start:
     cli                 # disable interrupts before setting up idt, PIT and PIC
     lgdt gdt_ptr        # load gdt table address into GDTR register
-
-    
-
     ljmp $0x08, $1f     # go to the kernel code segment
 
 1: 
