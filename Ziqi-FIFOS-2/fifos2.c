@@ -7,6 +7,8 @@
 #include "multiboot.h"
 #include "thread.h"
 #include "print.h"
+#include "interrupt.h"
+#include "idt.h"
 
 /* Macros. */
 /* The number of threads */ 
@@ -141,6 +143,8 @@ void thread3_run() {
     int jobs = 5;
     while( jobs ) {
         print("Thread<0003> is running...  ");
+        int k = 10;
+        k = k/0;
         // delay
         delay();
         jobs--;

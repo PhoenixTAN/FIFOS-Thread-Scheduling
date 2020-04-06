@@ -51,9 +51,10 @@ gdt_ptr:
 
 idt:
     # ISRs 0 to 31 handle CPU exceptions
-    .long excep_div_by_zero
+    # .long excep_div_by_zero
+
     # ISRs 32 to 47 handle IRQ0 to IRQ15
-    .long irq0_handler
+    # .long irq0_handler
 
 idt_ptr:
     .short 0x7FF
@@ -76,9 +77,8 @@ _start:
 real_start:
     cli                 # disable interrupts before setting up idt, PIT and PIC
     lgdt gdt_ptr        # load gdt table address into GDTR register
-    lidt idt_ptr        # load idt table address into IDTR register
 
-    # TODO: initialize idt
+    
 
     ljmp $0x08, $1f     # go to the kernel code segment
 
@@ -93,16 +93,14 @@ real_start:
 
 	# set up stack
 	movl $stack+0x1000, %ESP # setup 4Kbyte stack
+    
+    # TODO: initialize idt
+    call init_idt
+    # lidt idt_ptr        # load idt table address into IDTR register
 	
-	# save multiboot parameter, for eventual call to C code
-	pushl %EBX
-
-	call init   # start of C code
+    call init   # start of C code
 
 	# In case we return from the call, we want to suspend the processor
 schedule_finish:	
 	cli     # disable interrupt
 	hlt     # halts CPU until the next external interrupt is fired
-
-
-

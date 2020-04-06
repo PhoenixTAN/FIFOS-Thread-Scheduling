@@ -1,3 +1,5 @@
+#include "multiboot.h"
+
 /* Thead status */
 enum THREAD_STATUS {
     NEW, READY, RUNNING, BLOCK, TERMINATED
@@ -5,9 +7,9 @@ enum THREAD_STATUS {
 
 /* TCB(Thread Control Block) */
 typedef struct {
-    unsigned int *sp;           // stack pointer
+    multiboot_uint32_t *sp;           // stack pointer
     int tid;                    // a thread uid
-    unsigned int (*run)();
+    multiboot_uint32_t (*run)();
     enum THREAD_STATUS status;
     int priority;
 

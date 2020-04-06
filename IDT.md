@@ -72,9 +72,8 @@ instruction.
 
 ## IRS in assembly
 
-## Set up an IDT
+## IDT Entry
 
-### IDT setup in assembly
 
 ### Test IDT
 1. Cause an exception:
