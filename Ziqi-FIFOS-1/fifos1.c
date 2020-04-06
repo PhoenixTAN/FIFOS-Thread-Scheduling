@@ -79,22 +79,25 @@ int create_thread(void* stack, void* run) {
     tcb[uid].priority = 0;
     
     // initial context
-    *((multiboot_uint32_t *)stack) = (multiboot_uint32_t)run;   // EIP
-    
+    *((multiboot_uint32_t *)stack - 0) = (multiboot_uint32_t)run;   // EIP 
     // FLAG[1] 1，always 1 in EFLAGS
     // FLAG[9] 0，disable interrupt
-    *((multiboot_uint32_t *)stack -  1) = 2;          // FLAG
-    *((multiboot_uint32_t *)stack -  2) = 0;          // EAX   
-    *((multiboot_uint32_t *)stack -  3) = 0;          // EBX 
-    *((multiboot_uint32_t *)stack -  4) = 0;          // ECX 
-    *((multiboot_uint32_t *)stack -  5) = 0;          // EDX
-    *((multiboot_uint32_t *)stack -  6) = 0;          // ESP
-    *((multiboot_uint32_t *)stack -  7) = 0;          // EBP 
-    *((multiboot_uint32_t *)stack -  8) = 0;          // ESI 
-    *((multiboot_uint32_t *)stack -  9) = 0;          // EDI
-
+    *((multiboot_uint32_t *)stack - 1) = 2;          // FLAG
+    *((multiboot_uint32_t *)stack - 2) = 0;          // EAX   
+    *((multiboot_uint32_t *)stack - 3) = 0;          // EBX 
+    *((multiboot_uint32_t *)stack - 4) = 0;          // ECX 
+    *((multiboot_uint32_t *)stack - 5) = 0;          // EDX
+    *((multiboot_uint32_t *)stack - 6) = 0;          // ESP
+    *((multiboot_uint32_t *)stack - 7) = 0;          // EBP 
+    *((multiboot_uint32_t *)stack - 8) = 0;          // ESI 
+    *((multiboot_uint32_t *)stack - 9) = 0;          // EDI
+    *(((multiboot_uint16_t *)stack) - 19) = 0x10;    // SS
+    *(((multiboot_uint16_t *)stack) - 20) = 0x10;    // DS
+    *(((multiboot_uint16_t *)stack) - 21) = 0x10;    // ES
+    *(((multiboot_uint16_t *)stack) - 22) = 0x10;    // FS
+    *(((multiboot_uint16_t *)stack) - 23) = 0x10;    // GS
     // update the stack pointer at one time
-    tcb[uid].sp = (multiboot_uint32_t*)stack - 9;
+    tcb[uid].sp = (multiboot_uint32_t)((multiboot_uint16_t*)stack - 23);
     uid++;
 
     return tcb[uid].tid;
