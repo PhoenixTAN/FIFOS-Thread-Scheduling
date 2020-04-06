@@ -79,7 +79,7 @@ real_start:
 	movl $stack+0x1000, %ESP # setup 4Kbyte stack
 	
 	# save multiboot parameter, for eventual call to C code
-	pushl %EBX
+	# pushl %EBX
 
 	call init   # start of C code
 

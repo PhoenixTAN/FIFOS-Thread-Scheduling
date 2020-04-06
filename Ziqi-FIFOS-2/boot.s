@@ -49,6 +49,12 @@ gdt_ptr:
     # offset: 4 bytes
     .long gdt       # linear address of the table itself
 
+idt:
+    # ISRs 0 to 31 handle CPU exceptions
+    .long excep_div_by_zero
+    # ISRs 32 to 47 handle IRQ0 to IRQ15
+    .long irq0_handler
+
 idt_ptr:
     .short 0x7FF
     .long idt
@@ -68,7 +74,12 @@ _start:
 	.long 0xE4524FFB    # Checksum
 
 real_start:
-    lgdt gdt_ptr        # load gtd table address into GDTR register
+    cli                 # disable interrupts before setting up idt, PIT and PIC
+    lgdt gdt_ptr        # load gdt table address into GDTR register
+    lidt idt_ptr        # load idt table address into IDTR register
+
+    # TODO: initialize idt
+
     ljmp $0x08, $1f     # go to the kernel code segment
 
 1: 
@@ -90,6 +101,8 @@ real_start:
 
 	# In case we return from the call, we want to suspend the processor
 schedule_finish:	
-	cli
+	cli     # disable interrupt
 	hlt     # halts CPU until the next external interrupt is fired
+
+
 

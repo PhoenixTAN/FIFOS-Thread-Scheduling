@@ -35,7 +35,7 @@ multiboot_uint32_t stack2[stack_size];
 multiboot_uint32_t stack3[stack_size];
 
 /* Forward declarations. */
-void init(multiboot_info_t* pmb);
+void init(/*multiboot_info_t* pmb*/);
 int create_thread(void* stack, void* run);
 void thread1_run();
 void thread2_run();
@@ -50,7 +50,7 @@ TCB* get_next_thread();
 void switch_thread();
 
 /* entrance of the C code */
-void init(multiboot_info_t* pmb) {
+void init(/*multiboot_info_t* pmb*/) {
     cls();
     println("FIFOS-1: Ziqi Tan, Jiaqian Sun");
     println("First come first serve thread scheduler:");
