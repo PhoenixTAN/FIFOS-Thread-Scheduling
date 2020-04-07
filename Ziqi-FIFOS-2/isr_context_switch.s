@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 .global isr_context_protection
 .global isr_context_retrieve
 
@@ -24,3 +25,18 @@ isr_context_retrieve:
 
     iret
 
+=======
+.global isr_wrapper
+
+isr_wrapper:
+    # pushfl
+    pushal
+
+    # pass 
+
+    # call interrupt_handler 
+
+    popal
+    # popfl
+    iret
+>>>>>>> 947562a42dadd67dde752c5c4a5809a24191a899

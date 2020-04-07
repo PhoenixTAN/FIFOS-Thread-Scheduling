@@ -52,7 +52,11 @@ gdt_ptr:
 idt:
     # ISRs 0 to 31 handle CPU exceptions
     # .long excep_div_by_zero
+<<<<<<< HEAD
     .fill 256, 8, 0
+=======
+
+>>>>>>> 947562a42dadd67dde752c5c4a5809a24191a899
     # ISRs 32 to 47 handle IRQ0 to IRQ15
     # .long irq0_handler
 
@@ -77,6 +81,7 @@ _start:
 real_start:
     cli                 # disable interrupts before setting up idt, PIT and PIC
     lgdt gdt_ptr        # load gdt table address into GDTR register
+<<<<<<< HEAD
    
     # TODO: initialize idt
     # load effective address
@@ -111,6 +116,8 @@ real_start:
 
     # load 0x8E into P_DPL_S Gate Type into 5(%EDI)
     # movw $0x8E, 5(%EDI)	
+=======
+>>>>>>> 947562a42dadd67dde752c5c4a5809a24191a899
     ljmp $0x08, $1f     # go to the kernel code segment
 
 1: 
@@ -122,8 +129,17 @@ real_start:
     movw %AX, %FS
     movw %AX, %GS
 
+<<<<<<< HEAD
     # set up stack
 	movl $stack+0x1000, %ESP # setup 4Kbyte stack
+=======
+	# set up stack
+	movl $stack+0x1000, %ESP # setup 4Kbyte stack
+    
+    # TODO: initialize idt
+    call init_idt
+    # lidt idt_ptr        # load idt table address into IDTR register
+>>>>>>> 947562a42dadd67dde752c5c4a5809a24191a899
 	
     call init   # start of C code
 
@@ -131,6 +147,7 @@ real_start:
 schedule_finish:	
 	cli     # disable interrupt
 	hlt     # halts CPU until the next external interrupt is fired
+<<<<<<< HEAD
 
 
 divide_by_zero_exception:
@@ -138,3 +155,5 @@ divide_by_zero_exception:
     call isr_context_protection
     call divide_by_zero_handler
     call isr_context_retrieve
+=======
+>>>>>>> 947562a42dadd67dde752c5c4a5809a24191a899
