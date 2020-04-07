@@ -16,8 +16,8 @@ void init_pic() {
 
 void init_pit() {
     outb(0x34, 0x43);
-    outb((11931812 / 25000) & 0xFF, 0X40);
-    outb((11931812 / 25000) >> 8, 0x40);
+    outb(0, 0X40);
+    outb(0, 0x40);
 }
 
 void interrupt_handler() {

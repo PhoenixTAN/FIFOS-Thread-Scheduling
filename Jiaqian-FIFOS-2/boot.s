@@ -91,7 +91,7 @@ real_start:
 	# save multiboot parameter, for eventual call to C code
 	# pushl %EBX
 
-       pushl %ebx
+    pushl %ebx
 	
 	/* set up IDT by construction 64-bit interrupt desciptors 
 	 * look at Ch.6 in the manual
@@ -161,7 +161,7 @@ int_table:
 timer:
 	/* the same way osdev programmed the interrupt handler */
 	pushal
-	cld
+	#cld
 	call interrupt_handler
 	popal
 	iret

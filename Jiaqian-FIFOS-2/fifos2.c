@@ -50,10 +50,12 @@ void get_threads_ready();
 TCB* get_next_thread();
 void switch_thread();
 
+void (*p)() = &thread1_run;
+
 /* entrance of the C code */
 void init(/*multiboot_info_t* pmb*/) {
     cls();
-    println("FIFOS-1: Ziqi Tan, Jiaqian Sun");
+    println("FIFOS-2: Ziqi Tan, Jiaqian Sun");
     println("First come first serve thread scheduler:");
 
     init_ready_queue();
@@ -67,8 +69,7 @@ void init(/*multiboot_info_t* pmb*/) {
     init_pit();
     __asm__ __volatile__("sti");
     while(1);
-    /* schedule */
-    // fifo_scheduler();
+    println("fifos end");
 }
 
 /* Create thread */
@@ -152,7 +153,7 @@ void thread3_run() {
         // delay
         delay();
         jobs--;
-        __asm__ __volatile__("sti"); 
+        __asm__ __volatile__("sti");
     }
     println("Thread<0003> finished.");
     thread_finish();
@@ -160,10 +161,10 @@ void thread3_run() {
 
 /* First come first serve scheduler */
 int fifo_scheduler() {
-
     // (1) add all NEW threads into ready queue.
     get_threads_ready();
 
+    put_char(isEmpty() + '0');
     // (2) ready queue is empty
     if( isEmpty() == 1 ) {
         println("Ready queue is empty.");
@@ -171,12 +172,20 @@ int fifo_scheduler() {
         __asm__ volatile("jmp schedule_finish");
         return 1;
     }
-
+    if(lastThread != (void*)0 && lastThread->status != TERMINATED) {
+        en_queue(lastThread);
+    }
     // (3) Find the next thread
     TCB* nextThread = get_next_thread();
-    
+
+    println("head&tail");
+    put_char(head + '0');
+    put_char(tail + '0');
+
     // (4) use asm to switch thread
+    // println("before swicth thread");
     switch_thread(nextThread);
+    // println("after switch thread");
     
     return 0;
 }
@@ -208,8 +217,9 @@ void switch_thread(TCB* nextThread) {
         TCB* temp = lastThread;     // record last thread
         lastThread = nextThread;    // update last thread
         nextThread->status = RUNNING;
-        println("Go back to scheduler...");
+        // println("Go back to scheduler...");
         __asm__ volatile("call context_protection"::"S"(temp), "D"(nextThread));
+        // println("after call");
         // "S": ESI, "D": EDI
     }
 }

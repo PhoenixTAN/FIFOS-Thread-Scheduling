@@ -22,11 +22,7 @@ static idt_entry idt[X86_RESERVE_EXCEPTION+USER_DEFINE];
     This will be called in boot.s
 */
 void init_idt() {
-<<<<<<< HEAD
     multiboot_uint32_t interrupt_handler = (multiboot_uint32_t)divide_by_zero_handler;
-=======
-    multiboot_uint32_t interrupt_handler = (multiboot_uint32_t)divide_by_zero_exception;
->>>>>>> 947562a42dadd67dde752c5c4a5809a24191a899
 
     idt[0].low_offset = (multiboot_uint16_t)(interrupt_handler & 0xFFFF);
     idt[0].selector = 0x08;
