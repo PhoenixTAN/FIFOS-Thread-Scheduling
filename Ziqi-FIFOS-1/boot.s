@@ -79,15 +79,12 @@ real_start:
 	movl $stack+0x1000, %ESP # setup 4Kbyte stack
 	
 	# save multiboot parameter, for eventual call to C code
-	pushl %EBX
+	# pushl %EBX
 
-    # Push the magic value
-    # pushl %EAX
 	call init   # start of C code
 
 	# In case we return from the call, we want to suspend the processor
 schedule_finish:	
 	cli
 	hlt     # halts CPU until the next external interrupt is fired
-loop:
-	jmp loop
+

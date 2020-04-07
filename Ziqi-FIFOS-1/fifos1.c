@@ -35,18 +35,22 @@ multiboot_uint32_t stack2[stack_size];
 multiboot_uint32_t stack3[stack_size];
 
 /* Forward declarations. */
-void init(multiboot_info_t* pmb);       
+void init(/*multiboot_info_t* pmb*/);
 int create_thread(void* stack, void* run);
 void thread1_run();
 void thread2_run();
 void thread3_run();
-int fifo_scheduler();
 void delay();
+
+int fifo_scheduler();
 void yield();
 void thread_finish();
+void get_threads_ready();
+TCB* get_next_thread();
+void switch_thread();
 
 /* entrance of the C code */
-void init(multiboot_info_t* pmb) {
+void init(/*multiboot_info_t* pmb*/) {
     cls();
     println("FIFOS-1: Ziqi Tan, Jiaqian Sun");
     println("First come first serve thread scheduler:");
@@ -60,7 +64,6 @@ void init(multiboot_info_t* pmb) {
 
     /* schedule */
     fifo_scheduler();
-
 }
 
 /* Create thread */
@@ -76,30 +79,25 @@ int create_thread(void* stack, void* run) {
     tcb[uid].priority = 0;
     
     // initial context
-    // pushfl
-    *((multiboot_uint32_t *)stack) = (multiboot_uint32_t)run;   // EIP
-    
-    // FLAG里面的第1位是1，表示always 1 in EFLAGS
-    // FLAG里面的第九位是0，表示disable interrupt
-    *((multiboot_uint32_t *)stack -  1) = 2;          // FLAG
-
-    *((multiboot_uint32_t *)stack -  2) = 0;          // EAX    
-    *((multiboot_uint32_t *)stack -  3) = 0;          // EBX  
-    *((multiboot_uint32_t *)stack -  4) = 0;          // ECX  
-    *((multiboot_uint32_t *)stack -  5) = 0;          // EDX  
-
-    *((multiboot_uint32_t *)stack -  6) = 0;          // ESP 
-    *((multiboot_uint32_t *)stack -  7) = 0;          // EBP  
-    *((multiboot_uint32_t *)stack -  8) = 0;          // ESI  
-    *((multiboot_uint32_t *)stack -  9) = 0;          // EDI 
-
-    *(((multiboot_uint16_t *)stack) -  20) = 0x10;    // DS
-    *(((multiboot_uint16_t *)stack) -  21) = 0x10;    // ES
-    *(((multiboot_uint16_t *)stack) -  22) = 0x10;    // FS
-    *(((multiboot_uint16_t *)stack) -  23) = 0x10;    // GS
-
-    tcb[uid].sp = (multiboot_uint32_t*)stack - 11;
-
+    *((multiboot_uint32_t *)stack - 0) = (multiboot_uint32_t)run;   // EIP 
+    // FLAG[1] 1，always 1 in EFLAGS
+    // FLAG[9] 0，disable interrupt
+    *((multiboot_uint32_t *)stack - 1) = 2;          // FLAG
+    *((multiboot_uint32_t *)stack - 2) = 0;          // EAX   
+    *((multiboot_uint32_t *)stack - 3) = 0;          // EBX 
+    *((multiboot_uint32_t *)stack - 4) = 0;          // ECX 
+    *((multiboot_uint32_t *)stack - 5) = 0;          // EDX
+    *((multiboot_uint32_t *)stack - 6) = 0;          // ESP
+    *((multiboot_uint32_t *)stack - 7) = 0;          // EBP 
+    *((multiboot_uint32_t *)stack - 8) = 0;          // ESI 
+    *((multiboot_uint32_t *)stack - 9) = 0;          // EDI
+    *(((multiboot_uint16_t *)stack) - 19) = 0x10;    // SS
+    *(((multiboot_uint16_t *)stack) - 20) = 0x10;    // DS
+    *(((multiboot_uint16_t *)stack) - 21) = 0x10;    // ES
+    *(((multiboot_uint16_t *)stack) - 22) = 0x10;    // FS
+    *(((multiboot_uint16_t *)stack) - 23) = 0x10;    // GS
+    // update the stack pointer at one time
+    tcb[uid].sp = (multiboot_uint32_t)((multiboot_uint16_t*)stack - 23);
     uid++;
 
     return tcb[uid].tid;
@@ -115,7 +113,6 @@ void thread_finish() {
     fifo_scheduler(); 
 }
 
-/* */
 void thread1_run() {
     int jobs = 2;
     while( jobs ) {
@@ -124,12 +121,10 @@ void thread1_run() {
         jobs--;
         yield();
     }
-    
     println("Thread<0001> finished.");
     thread_finish();
 }
 
-/* */
 void thread2_run() {
     int jobs = 4;
     while( jobs ) {
@@ -142,7 +137,6 @@ void thread2_run() {
     thread_finish();
 }
 
-/* */
 void thread3_run() {
     int jobs = 5;
     while( jobs ) {
@@ -160,13 +154,7 @@ void thread3_run() {
 int fifo_scheduler() {
 
     // (1) add all NEW threads into ready queue.
-    int i;
-    for( i = 0; i < N; i++ ) {
-        if( tcb[i].status == NEW ) {
-            en_queue(&tcb[i]);
-            tcb[i].status = READY;
-        }
-    }
+    get_threads_ready();
 
     // (2) ready queue is empty
     if( isEmpty() == 1 ) {
@@ -176,24 +164,46 @@ int fifo_scheduler() {
         return 1;
     }
 
-    // (3) Run the next thread
-    TCB* nextThread = de_queue();
-    nextThread->status = RUNNING;
-    // (*(nextThread->run))();
-    // use asm to switch
+    // (3) Find the next thread
+    TCB* nextThread = get_next_thread();
+    
+    // (4) use asm to switch thread
+    switch_thread(nextThread);
+    
+    return 0;
+}
+
+/* add new threads into ready queue */
+void get_threads_ready() {
+    int i;
+    for( i = 0; i < N; i++ ) {
+        if( tcb[i].status == NEW ) {
+            en_queue(&tcb[i]);
+            tcb[i].status = READY;
+        }
+    }
+}
+
+/* get next thread from the ready queue */
+TCB* get_next_thread() {
+    return de_queue();
+}
+
+/* switch from last*/
+void switch_thread(TCB* nextThread) {
     if( lastThread == (void*)0 || lastThread->status == TERMINATED ) {
         lastThread = nextThread;
-        __asm__ volatile("call context_protection"::"S"(0), "D"(nextThread));
+        nextThread->status = RUNNING;
+        __asm__ volatile("call context_retrieve"::"D"(nextThread));
     }
     else {
-        TCB* temp = lastThread;
-        lastThread = nextThread;
+        TCB* temp = lastThread;     // record last thread
+        lastThread = nextThread;    // update last thread
+        nextThread->status = RUNNING;
         println("Go back to scheduler...");
         __asm__ volatile("call context_protection"::"S"(temp), "D"(nextThread));
         // "S": ESI, "D": EDI
     }
-
-    return 0;
 }
 
 /* Opeartions for ready queue */
@@ -209,7 +219,6 @@ int en_queue(TCB* tcb) {
     }
     ready_queue[tail] = tcb;
     tail = (tail + 1) % ready_queue_size;
-    // println("en_queue");
     return 0;
 }
 
@@ -220,7 +229,6 @@ TCB* de_queue() {
     }
     TCB* tcb = ready_queue[head];
     head = (head + 1) % ready_queue_size;
-    // println("de_queue");
     return tcb;
 }
 
@@ -244,7 +252,6 @@ void delay() {
     int i, j;
     for( i = 0; i < 10000; i++ ) {
         for( j = 0; j < 30000; j++ ) {
-
         }
     }
 }

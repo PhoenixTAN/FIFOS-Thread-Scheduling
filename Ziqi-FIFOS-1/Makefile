@@ -1,9 +1,9 @@
 CC = gcc
 CFLAGS = -m32 -fno-builtin -fno-stack-protector -fno-strict-aliasing -fno-delete-null-pointer-checks -nostdinc -I. -g -Wall -std=c99
 CPPFLAGS = -Wa,--32 -MMD
-OBJS = boot.o fifos1.o context_switch.o
+OBJS = boot.o fifos1.o context.o
 PROGS = fifos1
-MNT_POINT=/root/mydisk
+MNT_POINT=/root/fifos/mydisk
 
 all: $(PROGS)
 

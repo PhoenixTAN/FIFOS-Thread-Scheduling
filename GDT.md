@@ -61,4 +61,44 @@ Writable bit for data selectors: Whether write access for this segment is allowe
 - Gr: Granularity bit. If 0 the limit is in 1 B blocks (byte granularity), if 1 the limit is in 4 KiB blocks (page granularity).
 - Sz: Size bit. If 0 the selector defines 16 bit protected mode. If 1 it defines 32 bit protected mode. You can have both 16 bit and 32 bit selectors at once.
 
-## Intel Manual
+## Intel 64 and IA-32 Architectures Software Developer's Manual
+### Volume 3 --- System Programming Guide
+#### Chapter 3 --- Protected-Mode Memory Management
+
+## Segmentation and Paging
+The memory management facilities of the IA-32 architecture are divided into two parts: segmentation and paging. 
+
+Segmentation provides a mechanism of isolating individual code, data, and stack modules so that multiple programs (or tasks) can run on the same processor without interfering with one another. 
+
+分段机制把不同程序的代码分离，在程序内部，把代码段，数据段和栈分离，达到同一个处理器运行不同程序，程序之间互不干扰的效果。
+
+Paging provides a mechanism for implementing a conventional demand-paged, virtual-memory system where sections of a program’s execution environment are mapped into physical memory as needed.
+
+分页机制提供了从虚拟内存到物理内存的映射机制。
+
+保护模式下，必然会有分段机制，但是分页机制是可选的。
+![alt text](./images/Segmentation-Paging.png)
+
+## Segment Selector
+![alt text](./images/Segment-Selector.png)
+Requested Privilege Level (RPL)(Bits 0 and 1) — Specifies the privilege level of the selector. The privilege level can range from 0 to 3, with 0 being the most privileged level. See Section 5.5, “Privilege Levels”, for a description of the relationship of the RPL to the CPL of the executing program (or task) and the descriptor privilege level (DPL) of the descriptor the segment selector points to.
+
+## Segment Register
+![alt text](./images/Segment-Register.png)
+
+Every segment register has a “visible” part and a “hidden” part. (The hidden part is sometimes referred to as a “descriptor cache” or a “shadow register.”) When a segment selector is loaded into the visible part of a segment register, the processor also loads the hidden part of the segment register with the base address, segment limit, and access control information from the segment descriptor pointed to by the segment selector.
+
+### 有了这些预备知识，看看逻辑地址Logical Address，怎么翻译成Linear Address
+举个例子，SS:SP的翻译。
+1. SS有16位是可以使用的，13位Index，1位GDT/LDT选择符，2位权限位（先假设我们使用GDT）；
+2. SS利用Index在GDT中，找到第index个Entry，把Entry中描述的Base Address和SP(作为offset)直接相加得到32位的Linear Address；
+3. 利用Entry的Base+Limit来检查是否超出访问范围。
+4. 利用Entry的Access Bytes检查是否有访问权限。
+
+## GDT and LDT(Local Descriptor Tables)
+
+![alt text](./images/GDT-LDT.png)
+
+![alt text](./images/ldt-gdt.jpg)
+## Overview
+![alt text](./images/System-Level.png)
