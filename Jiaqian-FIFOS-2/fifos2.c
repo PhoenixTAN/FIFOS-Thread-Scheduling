@@ -146,7 +146,7 @@ void thread2_run() {
 }
 
 void thread3_run() {
-    int jobs = 5;
+    int jobs = 8;
     while( jobs ) {
         __asm__ __volatile__("cli");
         print("Thread<0003> is running...  ");
@@ -164,7 +164,9 @@ int fifo_scheduler() {
     // (1) add all NEW threads into ready queue.
     get_threads_ready();
 
-    put_char(isEmpty() + '0');
+    if(lastThread != (void*)0 && lastThread->status != TERMINATED) {
+        en_queue(lastThread);
+    }
     // (2) ready queue is empty
     if( isEmpty() == 1 ) {
         println("Ready queue is empty.");
@@ -172,15 +174,9 @@ int fifo_scheduler() {
         __asm__ volatile("jmp schedule_finish");
         return 1;
     }
-    if(lastThread != (void*)0 && lastThread->status != TERMINATED) {
-        en_queue(lastThread);
-    }
+    
     // (3) Find the next thread
     TCB* nextThread = get_next_thread();
-
-    println("head&tail");
-    put_char(head + '0');
-    put_char(tail + '0');
 
     // (4) use asm to switch thread
     // println("before swicth thread");
