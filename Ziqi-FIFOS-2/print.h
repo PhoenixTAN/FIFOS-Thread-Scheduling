@@ -51,6 +51,7 @@ void newline(void) {
     xpos = 0;
     ypos++;
     if (ypos >= LINES) {
+        cls();
         ypos = 0;
     }
 }

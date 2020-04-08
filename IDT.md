@@ -72,6 +72,7 @@ instruction.
 
 ## IRS in assembly
 
+
 ## IDT Entry
 
 
@@ -84,7 +85,23 @@ instruction.
     - Using inline assembly, issue an INT instruction in your code after IDT is setup.
     - Make the corresponding ISR print something on the screen.
 
-## PIT (Programmable Interval Timer)
+## PIT chip (Programmable Interval Timer)(8253/8254 chip)
+PIT consists of an oscillator, a prescaler and 3 independent frequency dividers.
+
+### Oscillator: 1.193182 MHz
+
+### Frequency dividers
+The PIT has only **16 bits** that are used as frequency divider, which can represent the values from 0 to 65535.
+
+Since the frequency can't be divided by 0 in a sane way, many implementations use 0 to represent the value 65536
+
+The PIT chip has three separate **frequency dividers (or 3 separate channels)** that are programmable, in that the value of the "reset counter" is set by software (the OS).
+
+### Outpus
+#### Channel 0
+The output from PIT channel 0 is connected to the **PIC chip**, so that it generates an **"IRQ 0"**.
+
+Typically during boot the BIOS sets channel 0 with a count of 65535 or **0 (which translates to 65536)**, which gives an output frequency of **18.2065 Hz (or an IRQ every 54.9254 ms)**.
 
 ## PIC 
 

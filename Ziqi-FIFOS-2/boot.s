@@ -1,9 +1,10 @@
 # -----------------------------------------------------------------------------------------------
 # Author: 
-#           Ziqi Tan & Jiaqian Sun
+#           Jiaqian Sun & Ziqi Tan
 # Reference: 
 #           memos-2 reference code
 #           https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#multiboot_002eh
+#           http://quest.bu.edu/
 # -----------------------------------------------------------------------------------------------
 
     .global stack
@@ -114,11 +115,7 @@ real_start:
 	lidt idt_ptr
 
     call init
-	
-    cli 
-    hlt
 
-	# In case we return from the call, we want to suspend the processor
 schedule_finish:	
 	cli
 	hlt     # halts CPU until the next external interrupt is fired
@@ -159,10 +156,6 @@ int_table:
     .long timer
 	
 timer:
-	/* the same way osdev programmed the interrupt handler */
-	pushal
-	#cld
 	call interrupt_handler
-	popal
 	iret
 

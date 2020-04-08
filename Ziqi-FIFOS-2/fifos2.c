@@ -29,6 +29,7 @@ int en_queue(TCB* tcb);
 TCB* de_queue();
 int isEmpty();
 int isFull();
+void print_ready_queue();
 
 /* Private stack for threads */
 multiboot_uint32_t stack1[stack_size];
@@ -50,13 +51,12 @@ void get_threads_ready();
 TCB* get_next_thread();
 void switch_thread();
 
-void (*p)() = &thread1_run;
 
 /* entrance of the C code */
 void init(/*multiboot_info_t* pmb*/) {
     cls();
-    println("FIFOS-2: Ziqi Tan, Jiaqian Sun");
-    println("First come first serve thread scheduler:");
+    println("FIFOS-2: Jiaqian Sun, Ziqi Tan");
+    println("Round Robin Scheduler:");
 
     init_ready_queue();
 
@@ -68,8 +68,8 @@ void init(/*multiboot_info_t* pmb*/) {
     init_pic();
     init_pit();
     __asm__ __volatile__("sti");
-    while(1);
-    println("fifos end");
+    // wait for interrupt
+    delay();
 }
 
 /* Create thread */
@@ -109,11 +109,6 @@ int create_thread(void* stack, void* run) {
     return tcb[uid].tid;
 }
 
-void yield() {
-    en_queue(lastThread);
-    fifo_scheduler();  
-}
-
 void thread_finish() {
     lastThread->status = TERMINATED;
     fifo_scheduler(); 
@@ -122,11 +117,11 @@ void thread_finish() {
 void thread1_run() {
     int jobs = 2;
     while( jobs ) {
-        __asm__ __volatile__("cli");
-        print("Thread<0001> is running...  ");
+        println("Thread<0001> is running...  ");
+        //__asm__ __volatile__("sti");
         delay();
         jobs--;
-        __asm__ __volatile__("sti");
+        
     }
     println("Thread<0001> finished.");
     thread_finish();
@@ -135,25 +130,23 @@ void thread1_run() {
 void thread2_run() {
     int jobs = 4;
     while( jobs ) {
-        __asm__ __volatile__("cli");
-        print("Thread<0002> is running...  ");
+        println("Thread<0002> is running...  ");
+        //__asm__ __volatile__("sti");
         delay();
         jobs--;
-        __asm__ __volatile__("sti");
+        
     }
     println("Thread<0002> finished.");
     thread_finish();
 }
 
 void thread3_run() {
-    int jobs = 5;
+    int jobs = 7;
     while( jobs ) {
-        __asm__ __volatile__("cli");
-        print("Thread<0003> is running...  ");
-        // delay
+        println("Thread<0003> is running...  ");
+        //__asm__ __volatile__("sti");
         delay();
-        jobs--;
-        __asm__ __volatile__("sti");
+        jobs--;   
     }
     println("Thread<0003> finished.");
     thread_finish();
@@ -161,31 +154,28 @@ void thread3_run() {
 
 /* First come first serve scheduler */
 int fifo_scheduler() {
+    
     // (1) add all NEW threads into ready queue.
     get_threads_ready();
 
-    put_char(isEmpty() + '0');
-    // (2) ready queue is empty
-    if( isEmpty() == 1 ) {
-        println("Ready queue is empty.");
-        println("Schedule ends.");
-        __asm__ volatile("jmp schedule_finish");
-        return 1;
-    }
+    // (2) if the last thead has not terminated, add into ready queue.
     if(lastThread != (void*)0 && lastThread->status != TERMINATED) {
         en_queue(lastThread);
     }
-    // (3) Find the next thread
+
+    // (3) ready queue is empty
+    if( isEmpty() == 1 ) {
+        println("Ready queue is empty.");
+        println("Scheduling ends.");
+        __asm__ volatile("jmp schedule_finish");
+        return 1;
+    }
+
+    // (4) Find the next thread
     TCB* nextThread = get_next_thread();
 
-    println("head&tail");
-    put_char(head + '0');
-    put_char(tail + '0');
-
-    // (4) use asm to switch thread
-    // println("before swicth thread");
+    // (5) use asm to switch thread
     switch_thread(nextThread);
-    // println("after switch thread");
     
     return 0;
 }
@@ -196,7 +186,6 @@ void get_threads_ready() {
     for( i = 0; i < N; i++ ) {
         if( tcb[i].status == NEW ) {
             en_queue(&tcb[i]);
-            tcb[i].status = READY;
         }
     }
 }
@@ -217,9 +206,15 @@ void switch_thread(TCB* nextThread) {
         TCB* temp = lastThread;     // record last thread
         lastThread = nextThread;    // update last thread
         nextThread->status = RUNNING;
-        // println("Go back to scheduler...");
+        // print scheduling information
+        /*
+        print("from thread");
+        put_char(temp->tid+'0');
+        print(" to ");
+        put_char(nextThread->tid + '0');
+        println("");
+        */
         __asm__ volatile("call context_protection"::"S"(temp), "D"(nextThread));
-        // println("after call");
         // "S": ESI, "D": EDI
     }
 }
@@ -235,6 +230,7 @@ int en_queue(TCB* tcb) {
     if( isFull() == 1 ) {
         return -1;
     }
+    tcb->status = READY;
     ready_queue[tail] = tcb;
     tail = (tail + 1) % ready_queue_size;
     return 0;
@@ -266,10 +262,20 @@ int isFull() {
      return -1;
 }
 
+/* print the current ready queue */
+void print_ready_queue() {
+    int i;
+    for( i = head; i < tail; i++ ) {
+        put_char(ready_queue[i]->tid + '0');
+        print(" ");
+    }
+}
+
+/* simulate the running of the thread */
 void delay() {
     int i, j;
     for( i = 0; i < 10000; i++ ) {
-        for( j = 0; j < 30000; j++ ) {
+        for( j = 0; j < 10000; j++ ) {
         }
     }
 }

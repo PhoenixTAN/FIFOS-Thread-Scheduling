@@ -22,6 +22,6 @@ context_retrieve:
     popw    %SS
     popal
     popfl
-
+    sti     # re-open interrupt here
     ret     # IP = SS:SP, SP = SP + 2
 

@@ -22,7 +22,7 @@ void init_pit() {
 
 void interrupt_handler() {
     outb(0x20 , 0x20);
-    println("interrupt_handler");
+    print("int ");
     // scheduler
     fifo_scheduler();
 }
