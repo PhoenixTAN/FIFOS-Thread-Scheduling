@@ -69,3 +69,23 @@ void println(char* str) {
     }
     newline();
 }
+
+void print_hex_string(multiboot_uint64_t data) {
+    char hex_str[19];
+    hex_str[0] = '0';
+    hex_str[1] = 'x';
+    hex_str[18] = '\0';
+    multiboot_uint16_t index;
+    multiboot_uint64_t temp;
+    for( index = 17, temp = 0x0000000f; index > 1; index--, data = data >> 4 ) {
+        multiboot_uint64_t hex_number = data & temp;
+        if( hex_number > 9 ) {
+            hex_number += 87;   // convert a~f to 'a'~'f'
+        }
+        else {
+            hex_number += 48;
+        }
+        hex_str[index] = hex_number;
+    }
+    println(hex_str);
+}

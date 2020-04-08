@@ -14,7 +14,7 @@ context_protection:
 
 context_retrieve:
     # retrieve the context from (EDI) for the next thead
-    movl    (%EDI) , %ESP
+    movl    (%EDI), %ESP
     popw    %GS
     popw    %FS
     popw    %ES

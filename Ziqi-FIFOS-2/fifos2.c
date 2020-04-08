@@ -8,7 +8,6 @@
 #include "thread.h"
 #include "print.h"
 #include "interrupt.h"
-#include "idt.h"
 
 /* Macros. */
 /* The number of threads */ 
@@ -37,7 +36,7 @@ multiboot_uint32_t stack2[stack_size];
 multiboot_uint32_t stack3[stack_size];
 
 /* Forward declarations. */
-void init(multiboot_info_t* pmb);
+void init(/*multiboot_info_t* pmb*/);
 int create_thread(void* stack, void* run);
 void thread1_run();
 void thread2_run();
@@ -51,10 +50,12 @@ void get_threads_ready();
 TCB* get_next_thread();
 void switch_thread();
 
+void (*p)() = &thread1_run;
+
 /* entrance of the C code */
-void init(multiboot_info_t* pmb) {
+void init(/*multiboot_info_t* pmb*/) {
     cls();
-    println("FIFOS-1: Ziqi Tan, Jiaqian Sun");
+    println("FIFOS-2: Ziqi Tan, Jiaqian Sun");
     println("First come first serve thread scheduler:");
 
     init_ready_queue();
@@ -64,8 +65,11 @@ void init(multiboot_info_t* pmb) {
     create_thread(&stack2[stack_size-1], thread2_run);
     create_thread(&stack3[stack_size-1], thread3_run);
 
-    /* schedule */
-    fifo_scheduler();
+    init_pic();
+    init_pit();
+    __asm__ __volatile__("sti");
+    while(1);
+    println("fifos end");
 }
 
 /* Create thread */
@@ -118,10 +122,11 @@ void thread_finish() {
 void thread1_run() {
     int jobs = 2;
     while( jobs ) {
+        __asm__ __volatile__("cli");
         print("Thread<0001> is running...  ");
         delay();
         jobs--;
-        yield();
+        __asm__ __volatile__("sti");
     }
     println("Thread<0001> finished.");
     thread_finish();
@@ -130,10 +135,11 @@ void thread1_run() {
 void thread2_run() {
     int jobs = 4;
     while( jobs ) {
+        __asm__ __volatile__("cli");
         print("Thread<0002> is running...  ");
         delay();
         jobs--;
-        yield(); 
+        __asm__ __volatile__("sti");
     }
     println("Thread<0002> finished.");
     thread_finish();
@@ -142,13 +148,12 @@ void thread2_run() {
 void thread3_run() {
     int jobs = 5;
     while( jobs ) {
+        __asm__ __volatile__("cli");
         print("Thread<0003> is running...  ");
-        int k = 10;
-        k = k/0;
         // delay
         delay();
         jobs--;
-        yield();  
+        __asm__ __volatile__("sti");
     }
     println("Thread<0003> finished.");
     thread_finish();
@@ -156,10 +161,10 @@ void thread3_run() {
 
 /* First come first serve scheduler */
 int fifo_scheduler() {
-
     // (1) add all NEW threads into ready queue.
     get_threads_ready();
 
+    put_char(isEmpty() + '0');
     // (2) ready queue is empty
     if( isEmpty() == 1 ) {
         println("Ready queue is empty.");
@@ -167,12 +172,20 @@ int fifo_scheduler() {
         __asm__ volatile("jmp schedule_finish");
         return 1;
     }
-
+    if(lastThread != (void*)0 && lastThread->status != TERMINATED) {
+        en_queue(lastThread);
+    }
     // (3) Find the next thread
     TCB* nextThread = get_next_thread();
-    
+
+    println("head&tail");
+    put_char(head + '0');
+    put_char(tail + '0');
+
     // (4) use asm to switch thread
+    // println("before swicth thread");
     switch_thread(nextThread);
+    // println("after switch thread");
     
     return 0;
 }
@@ -204,8 +217,9 @@ void switch_thread(TCB* nextThread) {
         TCB* temp = lastThread;     // record last thread
         lastThread = nextThread;    // update last thread
         nextThread->status = RUNNING;
-        println("Go back to scheduler...");
+        // println("Go back to scheduler...");
         __asm__ volatile("call context_protection"::"S"(temp), "D"(nextThread));
+        // println("after call");
         // "S": ESI, "D": EDI
     }
 }
