@@ -44,8 +44,8 @@ void thread2_run();
 void thread3_run();
 void delay();
 
-int fifo_scheduler();
-void yield();
+/* scheduling */
+void round_robin_scheduler();
 void thread_finish();
 void get_threads_ready();
 TCB* get_next_thread();
@@ -109,42 +109,41 @@ int create_thread(void* stack, void* run) {
     return tcb[uid].tid;
 }
 
+/* do some cleaning jobs when a thread finish */
 void thread_finish() {
     lastThread->status = TERMINATED;
-    fifo_scheduler(); 
+    round_robin_scheduler(); 
 }
 
+/* simulate thread 1 */
 void thread1_run() {
     int jobs = 2;
     while( jobs ) {
         println("Thread<0001> is running...  ");
-        //__asm__ __volatile__("sti");
         delay();
-        jobs--;
-        
+        jobs--;  
     }
     println("Thread<0001> finished.");
     thread_finish();
 }
 
+/* simulate thread 2 */
 void thread2_run() {
     int jobs = 4;
     while( jobs ) {
         println("Thread<0002> is running...  ");
-        //__asm__ __volatile__("sti");
         delay();
-        jobs--;
-        
+        jobs--;       
     }
     println("Thread<0002> finished.");
     thread_finish();
 }
 
+/* simulate thread 3 */
 void thread3_run() {
     int jobs = 7;
     while( jobs ) {
         println("Thread<0003> is running...  ");
-        //__asm__ __volatile__("sti");
         delay();
         jobs--;   
     }
@@ -153,7 +152,7 @@ void thread3_run() {
 }
 
 /* First come first serve scheduler */
-int fifo_scheduler() {
+void round_robin_scheduler() {
     
     // (1) add all NEW threads into ready queue.
     get_threads_ready();
@@ -168,7 +167,6 @@ int fifo_scheduler() {
         println("Ready queue is empty.");
         println("Scheduling ends.");
         __asm__ volatile("jmp schedule_finish");
-        return 1;
     }
 
     // (4) Find the next thread
@@ -176,8 +174,7 @@ int fifo_scheduler() {
 
     // (5) use asm to switch thread
     switch_thread(nextThread);
-    
-    return 0;
+
 }
 
 /* add new threads into ready queue */
@@ -207,13 +204,11 @@ void switch_thread(TCB* nextThread) {
         lastThread = nextThread;    // update last thread
         nextThread->status = RUNNING;
         // print scheduling information
-        /*
         print("from thread");
         put_char(temp->tid+'0');
         print(" to ");
         put_char(nextThread->tid + '0');
-        println("");
-        */
+        println("");     
         __asm__ volatile("call context_protection"::"S"(temp), "D"(nextThread));
         // "S": ESI, "D": EDI
     }

@@ -57,7 +57,6 @@ idt_ptr:
 	.text
 	.global _start
 	.global loop
-	.global switch_to
 
 .text
 .global _start
