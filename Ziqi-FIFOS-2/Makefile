@@ -3,7 +3,7 @@ CFLAGS = -m32 -fno-builtin -fno-stack-protector -fno-strict-aliasing -fno-delete
 CPPFLAGS = -Wa,--32 -MMD
 OBJS = boot.o fifos2.o context.o
 PROGS = fifos2
-MNT_POINT=/root/mydisk
+MNT_POINT=/root/fifos/mydisk
 
 all: $(PROGS)
 
