@@ -103,5 +103,13 @@ The output from PIT channel 0 is connected to the **PIC chip**, so that it gener
 
 Typically during boot the BIOS sets channel 0 with a count of 65535 or **0 (which translates to 65536)**, which gives an output frequency of **18.2065 Hz (or an IRQ every 54.9254 ms)**.
 
-## PIC 
+## PIC: 8259 Programmable Interrupt Controller
+
+The function of the 8259A is to manage hardware interrupts and send them to the appropriate system interrupt. This allows the system to respond to devices needs without loss of time (from polling the device, for instance).
+
+![alt text](./images/PIC.png)
+
+
+
+
 

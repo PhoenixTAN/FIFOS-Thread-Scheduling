@@ -155,6 +155,6 @@ int_table:
     .long timer
 	
 timer:
-	call interrupt_handler
+	call timer0_interrupt_handler
 	iret
 

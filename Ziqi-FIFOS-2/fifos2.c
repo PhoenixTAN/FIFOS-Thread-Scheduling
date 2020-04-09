@@ -10,7 +10,7 @@
 #include "interrupt.h"
 
 /* Macros. */
-/* The number of threads */ 
+/* The number of threads */
 #define N                       3
 #define stack_size              1024
 #define ready_queue_size        256
@@ -37,7 +37,7 @@ multiboot_uint32_t stack2[stack_size];
 multiboot_uint32_t stack3[stack_size];
 
 /* Forward declarations. */
-void init(/*multiboot_info_t* pmb*/);
+void init();
 int create_thread(void* stack, void* run);
 void thread1_run();
 void thread2_run();
@@ -53,11 +53,12 @@ void switch_thread();
 
 
 /* entrance of the C code */
-void init(/*multiboot_info_t* pmb*/) {
-    cls();
+void init() {
+    cls();  // clear the screen
     println("FIFOS-2: Jiaqian Sun, Ziqi Tan");
     println("Round Robin Scheduler:");
 
+    /* initialize ready queue */
     init_ready_queue();
 
     /* create threads */
@@ -204,11 +205,13 @@ void switch_thread(TCB* nextThread) {
         lastThread = nextThread;    // update last thread
         nextThread->status = RUNNING;
         // print scheduling information
+        /*
         print("from thread");
         put_char(temp->tid+'0');
         print(" to ");
         put_char(nextThread->tid + '0');
-        println("");     
+        println(""); 
+        */    
         __asm__ volatile("call context_protection"::"S"(temp), "D"(nextThread));
         // "S": ESI, "D": EDI
     }
