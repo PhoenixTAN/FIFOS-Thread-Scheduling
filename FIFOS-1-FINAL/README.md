@@ -1,6 +1,6 @@
 # FIFOS 1
 
-First come first serve thread scheduler.
+First come first serve thread scheduler by Ziqi Tan & Jiaqian Sun
 
 ## How to run?
 ```
