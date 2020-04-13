@@ -57,6 +57,7 @@ void init_pic() {
     /* set up master chip */
     outb(0x11, 0x20);           /* 8259 (ICW1) - xxx10x01 */
     outb(0x20, 0x21);     /* 8259 (ICW2) - set IRQ0... to int 0x20... */
+    outb (0x04, 0x21);            /* 8259 (ICW3) - connect IRQ2 to slave 8259 */
     outb(0x0D, 0x21);              /* 8259 (ICW4) - Buffered master, normal EOI, 8086 mode */
 }
 
